@@ -384,7 +384,13 @@ export function composeMessageWithIndex(
     return list.concat(message);
   }
 
-  // agent_status / tips and other msg_id-based messages:
+  // tips: every frame of a turn shares one msg_id, so resolving through msgIdIndex
+  // would overwrite the assistant text registered under that same msg_id. Always append.
+  if (message.type === 'tips') {
+    return list.concat(message);
+  }
+
+  // agent_status and other msg_id-based messages:
   // replace the existing item in place instead of appending duplicates.
   if (message.msg_id) {
     const existingIdx = index.msgIdIndex.get(message.msg_id);
