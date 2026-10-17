@@ -111,6 +111,7 @@ export interface ILegacyConfigStorageRefer extends IConfigStorageRefer {
   };
   'tools.speechToText'?: SpeechToTextConfig;
   'model.config'?: unknown;
+  'channel.wecom'?: unknown;
 }
 
 export interface IEnvStorageRefer {

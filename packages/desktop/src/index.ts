@@ -394,6 +394,9 @@ function markBackendReady(backendPort: number, source: string): void {
   broadcastBackendStartupState(null);
   void ensureAdminUserOnce(backendPort);
   scheduleBackendMigrations();
+  void import('./process/services/channel/wecomService')
+    .then(({ wecomService }) => wecomService.onBackendReady(backendPort))
+    .catch((err) => console.error('[AionUi] Failed to notify WeCom backend ready:', err));
 }
 
 function resolveDebugBackendStartupFailure(): BackendStartupFailureInfo | null {

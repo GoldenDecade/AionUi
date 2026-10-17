@@ -16,6 +16,7 @@ import type { IConfirmation } from '@/common/chat/chatLib';
 import type { AcpSlashCommandApiItem } from '@/common/chat/slash/types';
 import { bridge } from '@/common/platform/bridge';
 import { buildListTasksPath } from './teamTaskPath';
+import { wecomBridgeProviders } from './wecomBridgeTypes';
 import type { OpenDialogOptions } from 'electron';
 import type {
   ICssTheme,
@@ -2173,36 +2174,165 @@ function toChannelSession(raw: RawSession): IChannelSession {
 }
 
 export const channel = {
-  getPluginStatus: withResponseMap(httpGet<RawPluginStatus[], void>('/api/channel/plugins'), (raw) =>
-    raw.map(toPluginStatus)
-  ),
-  enablePlugin: httpPost<void, { plugin_id: string; config: Record<string, unknown> }>('/api/channel/plugins/enable'),
-  disablePlugin: httpPost<void, { plugin_id: string }>('/api/channel/plugins/disable'),
+  getPluginStatus: {
+    provider: () => {},
+    invoke: async () => {
+      const raw = await httpRequest<RawPluginStatus[]>('GET', '/api/channel/plugins');
+      const list = raw.map(toPluginStatus);
+      try {
+        const wecomStatus = await wecomBridgeProviders.getStatus.invoke();
+        const idx = list.findIndex((p) => p.type === 'wecom');
+        if (idx !== -1 && wecomStatus) {
+          list[idx] = { ...list[idx], ...wecomStatus };
+        }
+      } catch {
+        // Fallback
+      }
+      return list;
+    },
+  },
+  enablePlugin: {
+    provider: () => {},
+    invoke: async (params: { plugin_id: string; config: Record<string, unknown> }) => {
+      if (params.plugin_id === 'wecom') {
+        const creds = (params.config?.credentials as { bot_id?: string; secret?: string }) || {};
+        return wecomBridgeProviders.enable.invoke({
+          botId: creds.bot_id || '',
+          secret: creds.secret || '',
+        });
+      }
+      return httpRequest<void>('POST', '/api/channel/plugins/enable', params);
+    },
+  },
+  disablePlugin: {
+    provider: () => {},
+    invoke: async (params: { plugin_id: string }) => {
+      if (params.plugin_id === 'wecom') {
+        return wecomBridgeProviders.disable.invoke();
+      }
+      return httpRequest<void>('POST', '/api/channel/plugins/disable', params);
+    },
+  },
   testPlugin: httpPost<
     { success: boolean; bot_username?: string; error?: string },
     { plugin_id: string; token: string; extra_config?: { app_id?: string; app_secret?: string } }
   >('/api/channel/plugins/test'),
-  getPendingPairings: withResponseMap(httpGet<RawPairing[], void>('/api/channel/pairings'), (raw) =>
-    raw.map(toPairing)
-  ),
-  approvePairing: httpPost<void, { code: string }>('/api/channel/pairings/approve'),
-  rejectPairing: httpPost<void, { code: string }>('/api/channel/pairings/reject'),
-  getAuthorizedUsers: withResponseMap(httpGet<RawUser[], void>('/api/channel/users'), (raw) => raw.map(toChannelUser)),
-  revokeUser: httpPost<void, { user_id: string }>('/api/channel/users/revoke'),
+  getPendingPairings: {
+    provider: () => {},
+    invoke: async () => {
+      const raw = await httpRequest<RawPairing[]>('GET', '/api/channel/pairings').catch((): RawPairing[] => []);
+      const list = raw.map(toPairing);
+      try {
+        const wecomPairings = await wecomBridgeProviders.getPairings.invoke();
+        if (Array.isArray(wecomPairings)) {
+          return [...list, ...wecomPairings];
+        }
+      } catch {
+        // Fallback
+      }
+      return list;
+    },
+  },
+  approvePairing: {
+    provider: () => {},
+    invoke: async (p: { code: string }) => {
+      try {
+        const wecomPairings = await wecomBridgeProviders.getPairings.invoke();
+        if (wecomPairings?.some((pairing) => pairing.code === p.code)) {
+          return await wecomBridgeProviders.approvePairing.invoke(p);
+        }
+      } catch {
+        // Fallback
+      }
+      return httpRequest<void>('POST', '/api/channel/pairings/approve', p);
+    },
+  },
+  rejectPairing: {
+    provider: () => {},
+    invoke: async (p: { code: string }) => {
+      try {
+        const wecomPairings = await wecomBridgeProviders.getPairings.invoke();
+        if (wecomPairings?.some((pairing) => pairing.code === p.code)) {
+          return await wecomBridgeProviders.rejectPairing.invoke(p);
+        }
+      } catch {
+        // Fallback
+      }
+      return httpRequest<void>('POST', '/api/channel/pairings/reject', p);
+    },
+  },
+  getAuthorizedUsers: {
+    provider: () => {},
+    invoke: async () => {
+      const raw = await httpRequest<RawUser[]>('GET', '/api/channel/users').catch((): RawUser[] => []);
+      const list = raw.map(toChannelUser);
+      try {
+        const wecomUsers = await wecomBridgeProviders.getUsers.invoke();
+        if (Array.isArray(wecomUsers)) {
+          return [...list, ...wecomUsers];
+        }
+      } catch {
+        // Fallback
+      }
+      return list;
+    },
+  },
+  revokeUser: {
+    provider: () => {},
+    invoke: async (p: { user_id: string }) => {
+      try {
+        const wecomUsers = await wecomBridgeProviders.getUsers.invoke();
+        if (wecomUsers?.some((u) => u.id === p.user_id)) {
+          return await wecomBridgeProviders.revokeUser.invoke(p);
+        }
+      } catch {
+        // Fallback
+      }
+      return httpRequest<void>('POST', '/api/channel/users/revoke', p);
+    },
+  },
   getActiveSessions: withResponseMap(httpGet<RawSession[], void>('/api/channel/sessions'), (raw) =>
     raw.map(toChannelSession)
   ),
-  getPlatformSettings: httpGet<IChannelPlatformSettings, { platform: string }>(
-    (p) => `/api/channel/settings/${encodeURIComponent(p.platform)}`
-  ),
-  setAssistantSetting: httpPut<void, { platform: string; assistant: IChannelAssistantBindingWrite }>(
-    (p) => `/api/channel/settings/${encodeURIComponent(p.platform)}/assistant`,
-    (p) => p.assistant
-  ),
-  setDefaultModelSetting: httpPut<void, { platform: string; default_model: IChannelDefaultModelSetting }>(
-    (p) => `/api/channel/settings/${encodeURIComponent(p.platform)}/default-model`,
-    (p) => p.default_model
-  ),
+  getPlatformSettings: {
+    provider: () => {},
+    invoke: async (p: { platform: string }) => {
+      if (p.platform === 'wecom') {
+        try {
+          return await wecomBridgeProviders.getSettings.invoke();
+        } catch {
+          return { platform: 'wecom', assistant: null, default_model: null };
+        }
+      }
+      return httpRequest<IChannelPlatformSettings>('GET', `/api/channel/settings/${encodeURIComponent(p.platform)}`);
+    },
+  },
+  setAssistantSetting: {
+    provider: () => {},
+    invoke: async (p: { platform: string; assistant: IChannelAssistantBindingWrite }) => {
+      if (p.platform === 'wecom') {
+        return wecomBridgeProviders.setAssistant.invoke(p.assistant);
+      }
+      return httpRequest<void>(
+        'PUT',
+        `/api/channel/settings/${encodeURIComponent(p.platform)}/assistant`,
+        p.assistant
+      );
+    },
+  },
+  setDefaultModelSetting: {
+    provider: () => {},
+    invoke: async (p: { platform: string; default_model: IChannelDefaultModelSetting }) => {
+      if (p.platform === 'wecom') {
+        return wecomBridgeProviders.setDefaultModel.invoke(p.default_model);
+      }
+      return httpRequest<void>(
+        'PUT',
+        `/api/channel/settings/${encodeURIComponent(p.platform)}/default-model`,
+        p.default_model
+      );
+    },
+  },
   syncChannelSettings: httpPost<void, { platform: string }>('/api/channel/settings/sync'),
   pairingRequested: wsMappedEmitter<IChannelPairingRequest>('channel.pairing-requested', (raw) =>
     toPairing(raw as RawPairing)

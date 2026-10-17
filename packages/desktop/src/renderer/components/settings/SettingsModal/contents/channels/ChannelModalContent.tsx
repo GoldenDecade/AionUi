@@ -516,7 +516,7 @@ const ChannelModalContent: React.FC = () => {
     try {
       if (enabled) {
         if (!wecomPluginStatus?.hasToken) {
-          Message.warning(t('settings.wecom.configureFirst', 'Please save Token and EncodingAESKey first'));
+          Message.warning(t('settings.wecom.configureFirst', 'Please save Bot ID and Secret first'));
           setWecomEnableLoading(false);
           return;
         }
@@ -852,15 +852,18 @@ const ChannelModalContent: React.FC = () => {
       id: 'wecom',
       title: t('settings.channels.wecomTitle', 'WeCom'),
       description: t('settings.channels.wecomDesc', 'Chat with AionUi assistant via WeCom (Enterprise WeChat)'),
-      status: 'coming_soon' as const,
-      enabled: false,
-      disabled: true,
+      status: 'active',
+      enabled: wecomPluginStatus?.enabled || false,
+      disabled: wecomEnableLoading,
+      is_connected: wecomPluginStatus?.connected || false,
+      defaultModel: wecomModelSelection.current_model?.use_model,
       content: (
-        <div className='text-14px text-t-secondary py-12px'>
-          {t('settings.channels.comingSoonDesc', 'Support for {{channel}} is coming soon', {
-            channel: t('settings.channels.wecomTitle', 'WeCom'),
-          })}
-        </div>
+        <WecomConfigForm
+          pluginStatus={wecomPluginStatus}
+          modelSelection={wecomModelSelection}
+          onStatusChange={setWecomPluginStatus}
+          webuiStatus={webuiStatus}
+        />
       ),
     };
 
