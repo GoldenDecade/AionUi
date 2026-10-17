@@ -1,6 +1,10 @@
 {
   "fileChanges": "Изменения файлов",
   "fileChangesCount": "{{count}} изменений файлов",
+  "fileChangesCount_one": "{{count}} изменение файлов",
+  "fileChangesCount_other": "{{count}} изменений файлов",
+  "fileChangesCount_few": "{{count}} изменения файлов",
+  "fileChangesCount_many": "{{count}} изменений файлов",
   "conversationInProgress": "Диалог в процессе...",
   "confirm": "Подтвердить",
   "canceledExecution": "Выполнение отменено",
@@ -16,7 +20,16 @@
   "downloadFailed": "Не удалось скачать",
   "imageLoadFailed": "Не удалось загрузить изображение",
   "scrollToBottom": "Прокрутить вниз",
+  "anchorRail": {
+    "label": "Якоря сообщений диалога",
+    "tickAria": "Перейти к сообщению {{index}}",
+    "searchAria": "Поиск по переписке"
+  },
   "availableCommands": "{{count}} доступных команд",
+  "availableCommands_one": "{{count}} доступная команда",
+  "availableCommands_other": "{{count}} доступных команд",
+  "availableCommands_few": "{{count}} доступные команды",
+  "availableCommands_many": "{{count}} доступных команд",
   "slash.title": "Команды",
   "slash.hint": "Введите / для открытия меню команд",
   "slash.empty": "Команды не найдены",
@@ -53,6 +66,7 @@
   "noOptionsAvailable": "Нет доступных опций",
   "processing": "Обработка...",
   "responseSentSuccessfully": "Ответ успешно отправлен",
+  "permissionResponseFailed": "Не удалось отправить ответ. Повторите попытку.",
   "confirmation": {
     "applyChange": "Применить это изменение?",
     "allowExecution": "Разрешить выполнение?",
@@ -66,5 +80,26 @@
   },
   "atFile.hint": "Введите текст для поиска файлов",
   "atFile.menuLabel": "Упоминания файлов",
-  "atFile.loading": "Загрузка..."
+  "atFile.loading": "Загрузка...",
+  "atSession.hint": "Введите для поиска беседы",
+  "atSession.empty": "Беседы не найдены",
+  "atSession.menuLabel": "Упоминания бесед",
+  "fork": {
+    "action": "Ответвить отсюда",
+    "errorTurnInFlight": "Дождитесь завершения текущего ответа перед ответвлением",
+    "errorParentUnbound": "У этой беседы ещё нет серверной сессии для ответвления",
+    "errorPointUnsupported": "Этот агент может ответвляться только от последнего сообщения",
+    "errorUnsupported": "Этот агент не поддерживает ответвление",
+    "errorGeneric": "Не удалось создать ответвление: {{message}}"
+  },
+  "askSubmit": "Отправить",
+  "askDecline": "Не отвечать",
+  "askAnswered": "Отвечено",
+  "askDeclined": "Пропущено",
+  "askOther": "Другое",
+  "askOtherPlaceholder": "Введите свой ответ",
+  "requestDetails": "Детали запроса:",
+  "delivery": {
+    "pending": "Непрочитано"
+  }
 }

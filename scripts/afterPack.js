@@ -37,6 +37,34 @@ function verifyBundledResources(resourcesDir, electronPlatformName, targetArch) 
   console.log(`   ✓ Bundled resources verified for ${result.runtimeKey} (${result.checked.length} checks)`);
 }
 
+function fixAbsoluteSymlinks(dir) {
+  if (!fs.existsSync(dir)) return;
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isSymbolicLink()) {
+      try {
+        const linkTarget = fs.readlinkSync(fullPath);
+        if (path.isAbsolute(linkTarget)) {
+          const match = linkTarget.match(/\/bundled-aioncore\/.*$/);
+          if (match) {
+            const baseResources = fullPath.split('/Contents/Resources/')[0] + '/Contents/Resources';
+            const targetInBundle = path.join(baseResources, match[0]);
+            const relTarget = path.relative(path.dirname(fullPath), targetInBundle);
+            fs.unlinkSync(fullPath);
+            fs.symlinkSync(relTarget, fullPath);
+            console.log(`   ✓ Converted absolute symlink: ${entry.name} -> ${relTarget}`);
+          }
+        }
+      } catch (err) {
+        console.warn(`   ⚠️  Failed to check symlink ${fullPath}:`, err.message);
+      }
+    } else if (entry.isDirectory()) {
+      fixAbsoluteSymlinks(fullPath);
+    }
+  }
+}
+
 module.exports = async function afterPack(context) {
   const { arch, electronPlatformName, appOutDir, packager } = context;
   const targetArch = normalizeArch(typeof arch === 'string' ? arch : Arch[arch] || process.arch);
@@ -73,6 +101,7 @@ module.exports = async function afterPack(context) {
     }
 
     verifyBundledResources(resourcesDir, electronPlatformName, targetArch);
+    fixAbsoluteSymlinks(resourcesDir);
   } else {
     throw new Error(`resources directory not found: ${resourcesDir}`);
   }

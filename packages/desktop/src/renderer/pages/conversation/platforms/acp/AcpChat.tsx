@@ -5,7 +5,10 @@
  */
 
 import type { IConversationMcpStatus } from '@/common/config/storage';
+import type { ChatFileRef } from '@/common/types/chatFile';
 import { ConversationProvider } from '@/renderer/hooks/context/ConversationContext';
+import ConversationPlanBar from '@renderer/pages/conversation/PlanBar/ConversationPlanBar';
+import { usePlanRecovery } from '@renderer/pages/conversation/PlanBar/usePlanRecovery';
 import { CHAT_SURFACE_CONTAINER_CLASS } from '@/renderer/pages/conversation/utils/chatSurfaceWidth';
 import { useTeamPermission } from '@/renderer/pages/team/hooks/TeamPermissionContext';
 import type { TeamSendBoxRuntime } from '@/renderer/pages/team/components/teamSendRuntime';
@@ -37,9 +40,11 @@ const AcpChat: React.FC<{
   loadedSkills?: string[];
   loadedMcpServers?: string[];
   loadedMcpStatuses?: IConversationMcpStatus[];
-  teamSendMessage?: (payload: { input: string; files: string[] }) => Promise<void>;
+  teamSendMessage?: (payload: { input: string; files: ChatFileRef[] }) => Promise<void>;
   teamRuntime?: TeamSendBoxRuntime;
   assistantId?: string;
+  forkCapability?: { at_turn: boolean };
+  promptCapability?: { image: boolean; audio: boolean };
 }> = ({
   conversation_id,
   workspace,
@@ -55,9 +60,12 @@ const AcpChat: React.FC<{
   teamSendMessage,
   teamRuntime,
   assistantId,
+  forkCapability,
+  promptCapability,
 }) => {
   useMessageLstCache(conversation_id);
   usePendingConfirmationsRecovery(conversation_id);
+  usePlanRecovery(conversation_id);
   const teamPermission = useTeamPermission();
   const messageState = useAcpMessage(conversation_id, {
     skipWarmup: Boolean(teamPermission),
@@ -76,6 +84,8 @@ const AcpChat: React.FC<{
         loadedMcpServers,
         loadedMcpStatuses,
         assistantId,
+        forkCapability,
+        promptCapability,
       }}
     >
       <ConversationArtifactProvider conversation_id={conversation_id}>
@@ -84,13 +94,13 @@ const AcpChat: React.FC<{
             <MessageList className='flex-1' emptySlot={emptySlot} />
           </FlexFullContainer>
           <AcpE2EStreamInjector conversationId={conversation_id} />
+          <ConversationPlanBar conversation_id={conversation_id} />
           {!hideSendBox && (
             <AcpSendBox
               conversation_id={conversation_id}
               backend={backend}
               session_mode={session_mode}
               agent_name={agent_name}
-              workspacePath={workspace}
               messageState={messageState}
               teamSendMessage={teamSendMessage}
               teamRuntime={teamRuntime}

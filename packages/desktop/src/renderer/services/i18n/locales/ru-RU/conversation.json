@@ -1,7 +1,7 @@
 {
   "welcome": {
     "title": "Привет! Каковы ваши планы на сегодня?",
-    "placeholder": "Отправьте сообщение, загрузите файлы, откройте папку или создайте запланированную задачу...",
+    "placeholder": "Отправьте сообщение, загрузите файлы, откройте папку, создайте запланированную задачу или введите / для команд...",
     "linkFolder": "Открыть папку",
     "newConversation": "Новый чат",
     "selectModel": "Выбрать модель",
@@ -30,6 +30,7 @@
     "saveName": "Сохранить",
     "cancelEdit": "Отмена",
     "rename": "Переименовать",
+    "createCronTask": "Создать запланированную задачу",
     "renameTitle": "Переименовать чат",
     "renamePlaceholder": "Введите новое имя",
     "renameSuccess": "Успешно переименовано",
@@ -42,7 +43,15 @@
     "batchExportConfirm": "Экспортировать {{count}} выбранных тем?",
     "batchDelete": "Массовое удаление",
     "batchDeleteConfirm": "Удалить {{count}} выбранных тем?",
+    "batchDeleteConfirm_one": "Удалить {{count}} выбранную тему?",
+    "batchDeleteConfirm_other": "Удалить {{count}} выбранных тем?",
+    "batchDeleteConfirm_few": "Удалить {{count}} выбранные темы?",
+    "batchDeleteConfirm_many": "Удалить {{count}} выбранных тем?",
     "batchDeleteSuccess": "Удалено {{count}} тем",
+    "batchDeleteSuccess_one": "Удалена {{count}} тема",
+    "batchDeleteSuccess_other": "Удалено {{count}} тем",
+    "batchDeleteSuccess_few": "Удалено {{count}} темы",
+    "batchDeleteSuccess_many": "Удалено {{count}} тем",
     "batchNoSelection": "Сначала выберите темы",
     "export": "Экспортировать",
     "exportDialogTitle": "Экспорт тем",
@@ -57,6 +66,8 @@
     "exportFailed": "Ошибка экспорта",
     "pin": "Закрепить",
     "unpin": "Открепить",
+    "markAsUnread": "Пометить как непрочитанное",
+    "markAsRead": "Пометить как прочитанное",
     "pinned": "Закреплено",
     "pinFailed": "Не удалось закрепить",
     "pinnedSection": "Закреплённые",
@@ -68,12 +79,21 @@
     "earlier": "Ранее",
     "projectsSection": "Проекты",
     "conversationsSection": "Беседы",
-    "removeProjectTitle": "Удалить проект",
-    "removeProject": "Удалить проект",
-    "removeProjectConfirm": "Удалить проект «{{name}}»? Беседы в проекте тоже будут удалены: {{count}}.",
     "newConversationInProject": "Новая беседа в этом проекте",
     "deleting": "Удаление...",
-    "reorderPinned": "Перетащите, чтобы изменить порядок закреплённых бесед"
+    "reorderPinned": "Перетащите, чтобы изменить порядок закреплённых бесед",
+    "forkedFrom": "Ответвление от «{{name}}»",
+    "forkedConversation": "Ответвлённая беседа",
+    "archive": "Архивировать",
+    "archiveSuccess": "Архивировано",
+    "archiveFailed": "Не удалось архивировать",
+    "batchArchive": "Batch archive",
+    "batchArchiveConfirm": "Archive {{count}} selected topics? You can restore or delete them from Archived in Settings.",
+    "batchArchiveSuccess": "Archived {{count}} topics",
+    "archiveProject": "Archive project",
+    "archiveProjectTitle": "Archive project",
+    "archiveProjectConfirm": "Archive project \"{{name}}\"? Its {{count}} conversation(s) will be archived too. You can restore or delete them from Archived in Settings.",
+    "archiving": "Archiving..."
   },
   "historySearch": {
     "tooltip": "Поиск сообщений",
@@ -415,7 +435,8 @@
     "openWith": {
       "vscode": "VS Code",
       "terminal": "Терминал",
-      "explorer": "Проводник"
+      "explorer": "Проводник",
+      "browser": "Браузер"
     }
   },
   "minimap": {
@@ -423,7 +444,11 @@
     "searchHint": "Нажмите здесь для поиска по ключевым словам",
     "empty": "Пока нет вопросов и ответов",
     "noMatch": "Соответствующий контент не найден",
-    "count": "{{count}} ходов"
+    "count": "{{count}} ходов",
+    "count_one": "{{count}} ход",
+    "count_other": "{{count}} ходов",
+    "count_few": "{{count}} хода",
+    "count_many": "{{count}} ходов"
   },
   "chat": {
     "noModelSelected": "Модель для текущей сессии не выбрана, невозможно отправить сообщение",
@@ -441,6 +466,7 @@
     "switchAgentFailed": "Не удалось переключить агента",
     "speech": {
       "recordTooltip": "Начать голосовой ввод",
+      "recordTooltipWithShortcut": "Голосовой ввод cmd+M",
       "pickFileTooltip": "Выбрать аудиофайл",
       "stopTooltip": "Остановить запись",
       "processing": "Транскрибирование аудио...",
@@ -487,6 +513,10 @@
     "reorder": "Перетащите для изменения порядка",
     "remove": "Удалить",
     "files": "{{count}} файлов",
+    "files_one": "{{count}} файл",
+    "files_other": "{{count}} файлов",
+    "files_few": "{{count}} файла",
+    "files_many": "{{count}} файлов",
     "pausedAfterFailure": "Следующая команда в очереди не может запуститься. Отредактируйте, измените порядок или удалите для продолжения.",
     "emptyInput": "Команды в очереди не могут быть пустыми.",
     "queueFull": "Очередь заполнена. Удалите команду перед добавлением.",
@@ -504,10 +534,25 @@
     "mode": {
       "auto": "Авто-отправка",
       "manual": "Ручная отправка"
-    }
+    },
+    "addToQueue": "Добавить в черновики",
+    "addToQueueShortcut": "⌘ + Enter / Ctrl + Enter",
+    "midturnBlocked": "Вставка сообщений не поддерживается, пока этот агент отвечает. Используйте «Добавить в черновики».",
+    "enterShortcut": "Enter",
+    "actionMode": "Choose send action",
+    "midturnBlockedSendHint": "This agent is still working, so the message can’t be sent directly. Save it to Draft box and send it later.",
+    "addToQueueBusyHint": "Save to Draft box and send it later."
   },
   "contextUsage": {
-    "contextUsed": "контекст использован"
+    "contextUsed": "контекст использован",
+    "tokensUsed": "Использовано токенов: {{tokens}}",
+    "windowUnknown": "Размер контекстного окна неизвестен",
+    "sessionCost": "Стоимость сессии",
+    "input": "Ввод",
+    "output": "Вывод",
+    "thought": "Размышление",
+    "cachedRead": "Чтение кэша",
+    "cachedWrite": "Запись кэша"
   },
   "skill_generator": {
     "title": "Создать навык/правило",
@@ -554,7 +599,9 @@
     "sendboxHint": "Подготавливается среда выполнения. Первый запуск может занять немного больше времени."
   },
   "sendbox": {
-    "hint": "Введите / для команд, @ для ссылок на файлы"
+    "hint": "Введите / для команд, @ для ссылок на файлы, ↑/↓ для истории сообщений",
+    "mediaPathFallback": "Этот агент не поддерживает данный тип файла нативно; он будет отправлен в виде пути к файлу.",
+    "hintWithSessions": "/ — команды, @ — файлы, @@ — беседы, ↑/↓ — история"
   },
   "agentTip": {
     "codes": {
@@ -562,7 +609,10 @@
         "body": "Этот запрос завершился без видимого ответа."
       },
       "ACP_EMPTY_TURN_NEEDS_AUTH": {
-        "body": "Этот запрос не дал видимого ответа. Возможно, агенту сначала нужно, чтобы вы вошли в систему: {{hint}}."
+        "body": "Этот запрос не дал видимого ответа. Если вы уже вошли в систему, возможно, это временная проблема бэкенда или соединения — повторите попытку или начните новый разговор. Если вы ещё не вошли, вы можете войти: {{hint}}."
+      },
+      "ACP_EMPTY_TURN_TOKEN_LIMIT": {
+        "body": "Этот запрос не дал видимого ответа. Возможно, текущий разговор приближается к пределу длины контекста — повторите попытку или начните новый разговор и попробуйте снова."
       },
       "ACP_EMPTY_TURN_MAX_TOKENS": {
         "body": "В этом запросе модель достигла лимита выходных токенов до того, как появился видимый ответ."
@@ -572,8 +622,181 @@
       },
       "ACP_EMPTY_TURN_REFUSAL": {
         "body": "Модель отклонила этот запрос до того, как появился видимый ответ."
+      },
+      "ANTIGRAVITY_STEPS_FAILED": {
+        "body": "Шагов завершилось неудачей: {{count}}; они НЕ были выполнены. agy всё равно помечает такие ходы как успешные — проверяйте фактический результат, а не ответ."
+      },
+      "CLI_VERSION_OLDER": {
+        "body": "Установленная версия {{cli}} старее проверенной AionUi; часть возможностей может отсутствовать. Рекомендуется обновить {{cli}}. (установлено: {{reported}} / проверено AionUi: {{verified}})"
+      },
+      "CLI_VERSION_NEWER": {
+        "body": "Установленная версия {{cli}} новее проверенной AionUi. Обычно всё работает; сообщите о странном поведении. (установлено: {{reported}} / проверено AionUi: {{verified}})"
+      },
+      "CODEX_RETRYING": {
+        "body": "{{detail}} (попытка {{attempts}}, прошло {{elapsed}} — провайдер агента постоянно обрывает соединение, AionUi ждёт восстановления.)"
       }
     }
   },
-  "notFound": "Беседа не найдена или была удалена"
+  "notFound": "Беседа не найдена или была удалена",
+  "explorer": {
+    "addFolder": "Add folder to project",
+    "refreshFiles": "Обновить файлы",
+    "refreshChanges": "Обновить изменения",
+    "collapseAll": "Свернуть все",
+    "removeFolder": "Remove from project",
+    "attachDuplicate": "This folder is already in the project",
+    "attachOverlap": "This folder overlaps a folder already in the project",
+    "attachFailed": "Couldn't add the folder",
+    "removeFailed": "Couldn't remove the folder",
+    "contextMenu": {
+      "rename": "Переименовать",
+      "addToChat": "Добавить в чат",
+      "copyRelativePath": "Копировать относительный путь",
+      "copyAbsolutePath": "Копировать абсолютный путь",
+      "newFile": "Новый файл",
+      "newDir": "Новая папка"
+    },
+    "namePlaceholder": "Имя",
+    "deleteConfirm": "Удалить «{{name}}»? Это действие нельзя отменить.",
+    "renameFailed": "Не удалось переименовать",
+    "newFileFailed": "Не удалось создать файл",
+    "newDirFailed": "Не удалось создать папку",
+    "tabs": {
+      "files": "Файлы",
+      "changes": "Изменения"
+    },
+    "addedToChat": "{{name}} добавлен в чат",
+    "imported": "Импортировано файлов: {{count}}",
+    "importPartialFailed": "Скопировано: {{copied}}, с ошибкой: {{failed}} (конфликты имён или не поддерживается)",
+    "importFailed": "Не удалось импортировать файлы",
+    "copyNodeFailed": "Не удалось скопировать",
+    "moveNodeFailed": "Не удалось переместить",
+    "search": {
+      "placeholder": "Поиск файлов по имени",
+      "searching": "Поиск…",
+      "empty": "Нет совпадающих файлов",
+      "limitReached": "Показаны первые {{count}} — уточните запрос"
+    },
+    "scm": {
+      "notARepository": "Эта папка не под контролем версий",
+      "noChanges": "Нет изменений",
+      "loading": "Загрузка изменений…",
+      "loadFailed": "Не удалось загрузить изменения",
+      "groups": {
+        "staged": "Проиндексированные изменения",
+        "unstaged": "Изменения",
+        "changes": "Изменения",
+        "blocked": "Требует решения"
+      },
+      "sections": {
+        "repositories": "Репозитории",
+        "changes": "Изменения"
+      },
+      "viewAsTree": "В виде дерева",
+      "viewAsList": "В виде списка",
+      "worktree": "Рабочее дерево",
+      "expandWorktrees": "Показать рабочие деревья",
+      "collapseWorktrees": "Скрыть рабочие деревья",
+      "state": {
+        "created": "Добавлен",
+        "modified": "Изменён",
+        "deleted": "Удалён",
+        "renamed": "Переименован",
+        "conflicted": "Конфликт",
+        "unknown": "Неизвестное состояние"
+      },
+      "badge": {
+        "created": "A",
+        "modified": "M",
+        "deleted": "D",
+        "renamed": "R",
+        "conflicted": "!",
+        "unknown": "?"
+      },
+      "conflictedHint": "Сначала устраните конфликт вне AionUi",
+      "opaqueHint": "Это состояние пришло от более новой версии сервера — только для просмотра",
+      "degraded": "Обновление идёт в замедленном режиме: не удаётся записать индекс git",
+      "truncated": "Слишком много изменений — показана только первая часть",
+      "renamedFrom": "{{from}} → {{to}}",
+      "diff": {
+        "loading": "Загрузка различий…",
+        "failed": "Не удалось загрузить различия",
+        "binary": "Двоичный файл — текстовых различий нет",
+        "truncated": "Различия усечены (большой файл)",
+        "empty": "Нет текстовых изменений",
+        "close": "Закрыть различия"
+      },
+      "actions": {
+        "stage": "Проиндексировать изменения",
+        "unstage": "Убрать из индекса",
+        "discard": "Отменить изменения",
+        "stageAll": "Проиндексировать всё",
+        "unstageAll": "Убрать всё из индекса",
+        "blockedHint": "Сначала устраните конфликт вне AionUi, затем индексируйте или отменяйте",
+        "confirmDiscardTitle": "Отменить изменения?",
+        "confirmDiscardTracked": "Правки в {{count}} файлах будут потеряны. Это нельзя отменить.",
+        "confirmDiscardUntracked": "{{count}} новых файлов будут перемещены в корзину.",
+        "confirmDiscardMixed": "Правки в {{tracked}} файле(ах) будут безвозвратно потеряны; {{untracked}} новых файла(ов) попадут в корзину.",
+        "discardConfirmButton": "Отменить",
+        "okStage": "Проиндексировано файлов: {{count}}",
+        "okStage_one": "Проиндексировано файлов: {{count}}",
+        "okStage_other": "Проиндексировано файлов: {{count}}",
+        "okStage_few": "Проиндексировано файлов: {{count}}",
+        "okStage_many": "Проиндексировано файлов: {{count}}",
+        "okUnstage": "Убрано из индекса файлов: {{count}}",
+        "okUnstage_one": "Убрано из индекса файлов: {{count}}",
+        "okUnstage_other": "Убрано из индекса файлов: {{count}}",
+        "okUnstage_few": "Убрано из индекса файлов: {{count}}",
+        "okUnstage_many": "Убрано из индекса файлов: {{count}}",
+        "okDiscard": "Отменены изменения в {{count}} файлах",
+        "okDiscard_one": "Отменены изменения в {{count}} файле",
+        "okDiscard_other": "Отменены изменения в {{count}} файлах",
+        "okDiscard_few": "Отменены изменения в {{count}} файлах",
+        "okDiscard_many": "Отменены изменения в {{count}} файлах",
+        "partial": "Выполнено {{succeeded}} из {{total}} —— не удалось: {{failed}}",
+        "partialDetail": "Не выполнено: {{files}}",
+        "rejectedBlocked": "Ничего не изменено —— сначала устраните конфликт",
+        "rejectedUnsupported": "Этот репозиторий не поддерживает такое действие",
+        "rejectedFailed": "Не удалось выполнить действие",
+        "retry": "Повторить",
+        "notSent": "Запрос не дошёл до сервера, ничего не изменено. Можно повторить.",
+        "outcomeUnknown": "Соединение сброшено до получения ответа — операция могла завершиться, а могла и нет. Обновите и проверьте список файлов, прежде чем повторять.",
+        "allFailed": "Ни один из {{count}} файл(ов) не удалось обработать",
+        "allFailed_one": "Не удалось обработать {{count}} файл",
+        "allFailed_other": "Не удалось обработать ни один из {{count}} файлов",
+        "allFailed_few": "Не удалось обработать ни один из {{count}} файлов",
+        "allFailed_many": "Не удалось обработать ни один из {{count}} файлов"
+      }
+    },
+    "pathCopied": "Путь скопирован",
+    "copyFailed": "Не удалось скопировать путь"
+  },
+  "terminal": {
+    "running": "Выполняется",
+    "stopped": "Остановлено",
+    "exited": "Код {{code}}",
+    "stop": "Остановить",
+    "truncated": "(ранний вывод усечён)"
+  },
+  "emptyState": {
+    "greeting": "Здравствуйте! Расскажите, что нужно, и я начну."
+  },
+  "crossSession": {
+    "mentionAgain": "Упомянуть беседу {{name}} в поле ввода",
+    "mentionAgainHint": "Нажмите, чтобы упомянуть эту беседу в поле ввода",
+    "mentionUnavailable": "Эту беседу больше нельзя упомянуть.",
+    "mentionFailed": "Не удалось упомянуть эту беседу.",
+    "fromBadge": "Из беседы «{{name}}»",
+    "otherWorkspace": "другая рабочая папка",
+    "rateLimitedTitle": "Сообщения между беседами, возможно, зациклились",
+    "rateLimited": "Автоматические сообщения между «{{from}}» и «{{to}}» приходят необычно часто — возможно, они зациклились.",
+    "stopBoth": "Остановить обе беседы",
+    "disableFeature": "Отключить сообщения между беседами"
+  },
+  "planBar": {
+    "title": "План",
+    "progress": "{{completed}}/{{total}}",
+    "expand": "Развернуть план",
+    "collapse": "Свернуть план"
+  }
 }

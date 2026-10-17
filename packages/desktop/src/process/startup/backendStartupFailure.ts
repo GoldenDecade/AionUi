@@ -9,6 +9,8 @@ import type { BackendStartupFailureInfo } from '@/common/types/platform/electron
 type ErrorWithDetails = Error & {
   details?: {
     stage?: unknown;
+    serverListeningObserved?: unknown;
+    healthTimeoutKeptAlive?: unknown;
     isPackaged?: unknown;
     causeMessage?: unknown;
     stderrTail?: unknown;
@@ -32,6 +34,11 @@ const GLIBC_VERSION_RE = /GLIBC_(\d+\.\d+)/g;
 const GLIBC_NOT_FOUND_RE = /GLIBC_\d+\.\d+[\s\S]{0,160}not found|not found[\s\S]{0,160}GLIBC_\d+\.\d+/i;
 const PACKAGED_APP_MARKER_ENTRIES = new Set(['app.asar', 'app.asar.unpacked/']);
 const DATA_MIGRATION_BOUNDARY_STAGES = new Set(['database.migration', 'database.schema_repair']);
+// aioncore's downgrade detection: the local database was written by a NEWER
+// AionUi than the one currently running (see AionCore `database.rs`,
+// DATABASE_NEWER_THAN_APP_STAGE). The database is intact — the fix is
+// upgrading, so this must not fall into the generic migration-failure bucket.
+const DATABASE_NEWER_THAN_APP_BOUNDARY_STAGE = 'database.newer_than_app';
 const RECOVERABLE_DATABASE_CORRUPTION_BOUNDARY_STAGE = 'database.recoverable_corruption';
 const LOCAL_DATA_REPAIR_BOUNDARY_CODE = 'BOOTSTRAP_SERVICE_INIT_FAILED';
 const LOCAL_DATA_REPAIR_BOUNDARY_STAGE = 'services.init';
@@ -239,6 +246,44 @@ function classifyStartupDirectoryFailure(
   return undefined;
 }
 
+// A health_timeout whose process was observed listening AND kept alive (pending)
+// is a recoverable "slow startup", not a broken installation. The kept-alive
+// gate excludes health_timeouts on paths that kill the process (e.g. database
+// recovery, `allowPendingOnHealthTimeout: false`), which must fall through to
+// their existing classification instead of being shown as "still starting".
+function classifyPendingSlowStartup(details: ErrorWithDetails['details']): BackendStartupFailureInfo | undefined {
+  if (!details) return undefined;
+  if (details.stage !== 'health_timeout') return undefined;
+  if (details.serverListeningObserved !== true) return undefined;
+  if (details.healthTimeoutKeptAlive !== true) return undefined;
+
+  return { reason: 'backend_startup_pending_slow' };
+}
+
+// A process that was observed listening but then exited before becoming ready is
+// an honest startup failure — never a missing-resource / reinstall case. Both
+// exit paths share stage `early_exit` (exit within the health window and exit
+// after the pending health timeout), so this single gate covers both.
+function classifyBackendStartupExited(details: ErrorWithDetails['details']): BackendStartupFailureInfo | undefined {
+  if (!details) return undefined;
+  if (details.stage !== 'early_exit') return undefined;
+  if (details.serverListeningObserved !== true) return undefined;
+
+  return { reason: 'backend_startup_exited' };
+}
+
+// A spawned process that never reported its listening port within the
+// port-report window (stage `listen_timeout`) timed out while starting — it is
+// NOT a broken installation. Unlike pending-slow/exited this gate must not
+// require `serverListeningObserved === true`: on this stage it is always false
+// by definition (Sentry 136646113).
+function classifyPortReportTimeout(details: ErrorWithDetails['details']): BackendStartupFailureInfo | undefined {
+  if (!details) return undefined;
+  if (details.stage !== 'listen_timeout') return undefined;
+
+  return { reason: 'backend_startup_port_report_timeout' };
+}
+
 export function classifyBackendStartupFailure(error: unknown): BackendStartupFailureInfo {
   const details = getBackendStartupDetails(error);
   const packageArchitectureMismatch = classifyPackageArchitectureMismatch(details);
@@ -276,6 +321,17 @@ export function classifyBackendStartupFailure(error: unknown): BackendStartupFai
 
   if (
     backendBoundaryCode === 'BOOTSTRAP_DATA_INIT_FAILED' &&
+    backendBoundaryStage === DATABASE_NEWER_THAN_APP_BOUNDARY_STAGE
+  ) {
+    return {
+      reason: 'backend_database_newer_than_app',
+      backendBoundaryCode,
+      backendBoundaryStage,
+    };
+  }
+
+  if (
+    backendBoundaryCode === 'BOOTSTRAP_DATA_INIT_FAILED' &&
     backendBoundaryStage === RECOVERABLE_DATABASE_CORRUPTION_BOUNDARY_STAGE
   ) {
     return {
@@ -296,6 +352,15 @@ export function classifyBackendStartupFailure(error: unknown): BackendStartupFai
       backendBoundaryStage,
     };
   }
+
+  const pendingSlowStartup = classifyPendingSlowStartup(details);
+  if (pendingSlowStartup) return pendingSlowStartup;
+
+  const backendStartupExited = classifyBackendStartupExited(details);
+  if (backendStartupExited) return backendStartupExited;
+
+  const portReportTimeout = classifyPortReportTimeout(details);
+  if (portReportTimeout) return portReportTimeout;
 
   return {
     reason: 'backend_startup_failed',

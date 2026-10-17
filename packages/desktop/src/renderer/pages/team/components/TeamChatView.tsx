@@ -1,4 +1,5 @@
 import { ipcBridge } from '@/common';
+import type { ChatFileRef } from '@/common/types/chatFile';
 import type { IConversationMcpStatus, IProvider, TChatConversation, TProviderWithModel } from '@/common/config/storage';
 import { Message, Spin } from '@arco-design/web-react';
 import React, { Suspense, useCallback } from 'react';
@@ -6,9 +7,16 @@ import { useTranslation } from 'react-i18next';
 import { useAionrsModelSelection } from '@/renderer/pages/conversation/platforms/aionrs/useAionrsModelSelection';
 import { isLegacyReadOnlyConversationType } from '@/renderer/pages/conversation/utils/conversationRuntime';
 import type { ITeamRunAck } from '@/common/types/team/teamTypes';
-import { buildTeamSendRuntime, buildTeamStopHandler, buildTeamWorkStatusText } from './teamSendRuntime';
-import type { TeamRunViewState } from '../hooks/useTeamRunView';
+import {
+  buildTeamRetryStartHandler,
+  buildTeamSendRuntime,
+  buildTeamStopHandler,
+  buildTeamWorkStatusText,
+} from './teamSendRuntime';
+import type { TeamSendBoxRuntime } from './teamSendRuntime';
+import type { TeamRunReconcileResult, TeamRunViewState } from '../hooks/useTeamRunView';
 import TeamChatEmptyState from './TeamChatEmptyState';
+import { useTeamTabs } from '@/renderer/pages/team/hooks/TeamTabsContext';
 import { usePresetAssistantInfo } from '@/renderer/hooks/agent/usePresetAssistantInfo';
 import { resolveConversationBackend } from '@/renderer/pages/conversation/utils/conversationAssistantIdentity';
 
@@ -20,7 +28,7 @@ const LegacyReadOnlyConversation = React.lazy(
 
 // Narrow to Aionrs conversations so model field is always available
 type AionrsConversation = Extract<TChatConversation, { type: 'aionrs' }>;
-type TeamSendOverride = (payload: { input: string; files: string[] }) => Promise<void>;
+type TeamSendOverride = (payload: { input: string; files: ChatFileRef[] }) => Promise<void>;
 type TeamConversationCapabilitySnapshot = {
   skills?: string[];
   mcp_servers?: string[];
@@ -105,7 +113,8 @@ type TeamChatViewProps = {
   isLeader?: boolean;
   teamRunView?: TeamRunViewState;
   onTeamRunAck?: (ack: ITeamRunAck) => void;
-  onRunStateStale?: () => Promise<boolean>;
+  onRunStateStale?: () => Promise<TeamRunReconcileResult>;
+  onTeamSlotPaused?: (slot_id: string) => void;
 };
 
 /**
@@ -124,8 +133,10 @@ const TeamChatView: React.FC<TeamChatViewProps> = ({
   teamRunView = EMPTY_TEAM_RUN_VIEW,
   onTeamRunAck,
   onRunStateStale,
+  onTeamSlotPaused,
 }) => {
   const { t } = useTranslation();
+  const { activeSlotId, switchTab } = useTeamTabs();
   const { info: presetAssistantInfo } = usePresetAssistantInfo(conversation);
   const capabilitySnapshot = conversation.extra as TeamConversationCapabilitySnapshot | undefined;
   // Single source of truth for the team greeting. Each *Chat simply forwards
@@ -181,26 +192,57 @@ const TeamChatView: React.FC<TeamChatViewProps> = ({
         removing: () => t('team.work.removing', { defaultValue: 'Removing this assistant…' }),
         sessionStopped: () => t('team.work.sessionStopped', { defaultValue: 'The team session has stopped.' }),
       });
+  const isRuntimeFailed = slot_id ? slotWork?.blocked_reason === 'runtime_failed' : false;
+  const interruptAndSend =
+    team_id && slot_id && !isLeader && slotWork?.active_turn_id
+      ? async ({ input, files }: Parameters<NonNullable<TeamSendBoxRuntime['onInterruptSend']>>[0]) => {
+          try {
+            await ipcBridge.team.interruptAgent.invoke({
+              team_id,
+              slot_id,
+              input,
+              files,
+              reason: 'leader_intervention',
+              queued_policy: 'retain',
+            });
+          } catch (error) {
+            console.error('[TeamChatView] interrupt agent failed', error);
+            Message.error(t('team.interruptAgentFailed'));
+            throw error;
+          }
+        }
+      : undefined;
   const teamRuntime =
     team_id && slot_id
-      ? buildTeamSendRuntime({
-          slot_id,
-          runView: teamRunView,
-          statusText: teamWorkStatusText,
-          sessionStopped: teamRunView.sessionStopped,
-          onStop: buildTeamStopHandler({
-            team_id,
+      ? {
+          ...buildTeamSendRuntime({
             slot_id,
             runView: teamRunView,
-            pauseSlotWork: (params) => ipcBridge.team.pauseSlotWork.invoke(params),
-            onStopFailed: () => {
-              Message.error(
-                t('team.stopAgentFailed', { defaultValue: 'Failed to stop this agent. Please try again.' })
-              );
-            },
-            onRunStateStale,
+            statusText: teamWorkStatusText,
+            sessionStopped: teamRunView.sessionStopped,
+            onStop: buildTeamStopHandler({
+              team_id,
+              slot_id,
+              runView: teamRunView,
+              pauseSlotWork: (params) => ipcBridge.team.pauseSlotWork.invoke(params),
+              onStopSucceeded: () => onTeamSlotPaused?.(slot_id),
+              onStopFailed: () => {
+                Message.error(
+                  t('team.stopAgentFailed', { defaultValue: 'Failed to stop this agent. Please try again.' })
+                );
+              },
+              onRunStateStale,
+            }),
           }),
-        })
+          // Only offer "retry start" when this slot's runtime failed; it triggers
+          // a directed per-member attach (not warmupSession/ensure_session).
+          onRetryStart: isRuntimeFailed ? buildTeamRetryStartHandler({ team_id, slot_id }) : undefined,
+          onInterruptSend: interruptAndSend,
+          // Focus coordination: the active tab owns its column's sendbox focus,
+          // and focusing that sendbox syncs the active tab back.
+          isActive: slot_id === activeSlotId,
+          onFocus: () => switchTab(slot_id),
+        }
       : undefined;
   const content = (() => {
     if (isLegacyReadOnlyConversationType(conversation.type)) {
@@ -209,6 +251,11 @@ const TeamChatView: React.FC<TeamChatViewProps> = ({
 
     switch (conversation.type) {
       case 'acp':
+      // Antigravity renders through the ACP chat surface here for the same
+      // reason it does outside a team: same extra payload, same event stream,
+      // same send box. Without this it falls to `default: null` and the
+      // teammate shows neither a message list nor an input box.
+      case 'antigravity':
         return (
           <AcpChat
             key={conversation.id}

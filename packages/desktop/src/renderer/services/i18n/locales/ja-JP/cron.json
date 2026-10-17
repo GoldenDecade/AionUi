@@ -5,6 +5,7 @@
   "nextRun": "次回実行",
   "lastRun": "前回実行",
   "lastError": "エラー",
+  "lastErrorWithDetail": "直近のエラー：{{error}}",
   "message": "実行内容",
   "goToConversation": "会話に移動",
   "status": {
@@ -13,7 +14,7 @@
     "error": "エラー",
     "unread": "新しい実行",
     "unconfigured": "スケジュールタスク未設定",
-    "defaultPrompt": "毎日午前10時に、最新のAIニュースを検索し、まとめてインサイトレポートを出力してください。"
+    "defaultPrompt": "毎日午前10時に、最新のAIニュースを検索し、まとめてインサイトレポートを出力してください。（AionUi でスケジュールタスクを作成するには、/cron スキルを使用してください。）"
   },
   "actions": {
     "goTo": "チャットを表示",

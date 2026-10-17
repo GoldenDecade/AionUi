@@ -1,6 +1,10 @@
 {
   "fileChanges": "Зміни у файлах",
   "fileChangesCount": "Зміни у файлах: {{count}}",
+  "fileChangesCount_one": "Зміни у файлах: {{count}}",
+  "fileChangesCount_other": "Зміни у файлах: {{count}}",
+  "fileChangesCount_few": "Зміни у файлах: {{count}}",
+  "fileChangesCount_many": "Зміни у файлах: {{count}}",
   "conversationInProgress": "Наразі триває діалог...",
   "confirm": "Підтвердити",
   "canceledExecution": "Виконання скасовано",
@@ -15,10 +19,22 @@
   "downloadFailed": "Не вдалося завантажити",
   "imageLoadFailed": "Не вдалося завантажити зображення",
   "scrollToBottom": "Прокрутити донизу",
+  "anchorRail": {
+    "label": "Якорі повідомлень розмови",
+    "tickAria": "Перейти до повідомлення {{index}}",
+    "searchAria": "Пошук у розмові"
+  },
   "availableCommands": "Доступні команди: {{count}}",
+  "availableCommands_one": "Доступні команди: {{count}}",
+  "availableCommands_other": "Доступні команди: {{count}}",
+  "availableCommands_few": "Доступні команди: {{count}}",
+  "availableCommands_many": "Доступні команди: {{count}}",
   "atFile.hint": "Введіть, щоб знайти файли",
   "atFile.menuLabel": "Згадки файлів",
   "atFile.loading": "Завантаження...",
+  "atSession.hint": "Введіть, щоб шукати розмови",
+  "atSession.empty": "Розмов не знайдено",
+  "atSession.menuLabel": "Згадки розмов",
   "slash.title": "Команди",
   "slash.hint": "Введіть /, щоб відкрити меню команд",
   "slash.empty": "Команд не знайдено",
@@ -55,6 +71,7 @@
   "noOptionsAvailable": "Немає доступних варіантів",
   "processing": "Обробка...",
   "responseSentSuccessfully": "Відповідь надіслано успішно",
+  "permissionResponseFailed": "Не вдалося надіслати відповідь. Спробуйте ще раз.",
   "confirmation": {
     "applyChange": "Застосувати цю зміну?",
     "allowExecution": "Дозволити виконання?",
@@ -68,5 +85,23 @@
   },
   "copyLastOutput": {
     "empty": "No response to copy yet"
+  },
+  "fork": {
+    "action": "Відгалузити звідси",
+    "errorTurnInFlight": "Дочекайтеся завершення поточної відповіді перед відгалуженням",
+    "errorParentUnbound": "У цієї розмови ще немає серверної сесії для відгалуження",
+    "errorPointUnsupported": "Цей агент може відгалужуватися лише від останнього повідомлення",
+    "errorUnsupported": "Цей агент не підтримує відгалуження",
+    "errorGeneric": "Не вдалося створити відгалуження: {{message}}"
+  },
+  "askSubmit": "Надіслати",
+  "askDecline": "Не відповідати",
+  "askAnswered": "Відповіли",
+  "askDeclined": "Пропущено",
+  "askOther": "Інше",
+  "askOtherPlaceholder": "Введіть свою відповідь",
+  "requestDetails": "Деталі запиту:",
+  "delivery": {
+    "pending": "Непрочитано"
   }
 }

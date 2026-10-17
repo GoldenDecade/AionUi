@@ -5,6 +5,7 @@
   "nextRun": "下次执行",
   "lastRun": "上次执行",
   "lastError": "错误信息",
+  "lastErrorWithDetail": "上次错误：{{error}}",
   "message": "执行内容",
   "goToConversation": "跳转到所属会话",
   "status": {
@@ -13,7 +14,7 @@
     "error": "执行出错",
     "unread": "有新执行",
     "unconfigured": "未配置定时任务",
-    "defaultPrompt": "每天早上10点，为我搜索AI最新的新闻动向，汇总并输出洞察报告。"
+    "defaultPrompt": "每天早上10点，为我搜索AI最新的新闻动向，汇总并输出洞察报告。（请使用 /cron 技能在 AionUi 中创建定时任务。）"
   },
   "actions": {
     "goTo": "查看会话",

@@ -15,7 +15,10 @@
     "renameOk": "Зберегти",
     "renameCancel": "Скасувати",
     "renameSuccess": "Команду перейменовано",
-    "deleteSuccess": "Команду видалено"
+    "deleteSuccess": "Команду видалено",
+    "archive": "Archive",
+    "archiveSuccess": "Team archived",
+    "archiveFailed": "Failed to archive team"
   },
   "newAgent": "Новий асистент",
   "noMessages": "Повідомлень ще немає.",
@@ -27,7 +30,8 @@
     "runtimeStarting": "Очікування запуску учасника…",
     "runtimeFailed": "Не вдалося запустити учасника.",
     "removing": "Видалення учасника…",
-    "sessionStopped": "Сеанс команди зупинено."
+    "sessionStopped": "Сеанс команди зупинено.",
+    "retryStart": "Повторити запуск"
   },
   "sendBox": {
     "placeholder": "Повідомлення для диспетчера..."
@@ -100,7 +104,8 @@
   "view": {
     "label": "View",
     "parallel": "Parallel",
-    "single": "Single"
+    "single": "Single",
+    "board": "Дошка"
   },
   "warmup": {
     "title": "Waking up the team…",
@@ -115,5 +120,76 @@
     "leaderFailedHint": "Switch its model above, then retry.",
     "retry": "Retry"
   },
-  "reorderMember": "Перетягніть, щоб змінити порядок учасників"
+  "reorderMember": "Перетягніть, щоб змінити порядок учасників",
+  "interruptAndSend": "Перервати й надіслати",
+  "interruptAgentFailed": "Не вдалося перервати агента. Спробуйте ще раз.",
+  "agentActions": {
+    "label": "Дії агента",
+    "reconnectDescription": "Перезапускає процес агента та зберігає поточний контекст.",
+    "disabled": {
+      "initializing": "Агент ініціалізується.",
+      "busy": "Зачекайте завершення поточної відповіді та робіт у черзі.",
+      "dormant": "Спочатку активуйте цього учасника.",
+      "failed": "Спочатку повторіть запуск цього учасника.",
+      "removing": "Цього учасника видаляють.",
+      "sessionStopped": "Сеанс команди зупинено.",
+      "unsupported": "Цей агент не підтримує новий контекст.",
+      "leaderNotTargetable": "Не можна почати новий контекст для керівника команди."
+    },
+    "contextReset": {
+      "title": "Почати новий контекст",
+      "description": "Створює новий сеанс бекенда. Історія чату та завдання зберігаються.",
+      "confirmTitle": "Почати новий контекст для {{memberName}}?",
+      "confirmContent": "Поточний сеанс агента буде зупинено, а з наступним повідомленням буде створено новий сеанс бекенда. Історія чату, завдання, файли, модель і налаштування учасника збережуться, але агент втратить контекст міркувань попереднього сеансу.",
+      "confirm": "Почати новий контекст",
+      "success": "Для {{memberName}} розпочато новий контекст.",
+      "partialSuccess": "Контекст {{memberName}} скинуто, але агент не перезапустився. Скористайтеся «Повторити запуск».",
+      "notApplied": "Не вдалося почати новий контекст. Поточний контекст збережено.",
+      "failed": "Не вдалося почати новий контекст. Спробуйте ще раз."
+    }
+  },
+  "systemNotice": {
+    "sender": "Команда",
+    "contextResetSuccess": "Для {{memberName}} розпочато новий контекст.",
+    "contextResetRuntimeFailed": "Контекст {{memberName}} скинуто, але агент не перезапустився."
+  },
+  "activity": {
+    "control": {
+      "sortNewest": "Найновіші",
+      "sortOldest": "Найстаріші",
+      "filterAll": "Усі",
+      "filterMessages": "Повідомлення",
+      "filterTasks": "Завдання",
+      "allMembers": "Усі учасники",
+      "showSystem": "Системні повідомлення",
+      "showTerminal": "Завершені завдання"
+    },
+    "fallbackLane": "Без призначення / зовнішні",
+    "empty": "Поки що немає активності",
+    "userIdentity": "Користувач / зовнішній",
+    "broadcast": "Надіслати всім",
+    "read": "Прочитано",
+    "unread": "Непрочитано",
+    "attachments": "Вкладень: {{count}}",
+    "attachments_one": "Вкладень: {{count}}",
+    "attachments_other": "Вкладень: {{count}}",
+    "attachments_few": "Вкладень: {{count}}",
+    "attachments_many": "Вкладень: {{count}}",
+    "expand": "Розгорнути",
+    "collapse": "Згорнути",
+    "blockedBy": "заблоковано #{{id}}",
+    "blockedByNamed": "заблоковано «{{name}}»",
+    "blockerUnknown": "Завдання недоступне",
+    "status": {
+      "pending": "Очікує",
+      "in_progress": "У роботі",
+      "completed": "Завершено",
+      "deleted": "Видалено"
+    },
+    "msgType": {
+      "message": "Повідомлення",
+      "idle_notification": "Сповіщення про простій",
+      "shutdown_request": "Запит на зупинку"
+    }
+  }
 }

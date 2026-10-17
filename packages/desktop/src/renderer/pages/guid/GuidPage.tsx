@@ -12,6 +12,7 @@ import { resolveLocaleKey } from '@/common/utils';
 import type { AssistantDetail } from '@/common/types/agent/assistantTypes';
 
 import { useInputFocusRing } from '@/renderer/hooks/chat/useInputFocusRing';
+import { appendPromptToDraft } from '@/renderer/hooks/chat/useSendBoxDraft';
 import { getFuzzyMatchIndices, useSlashCommandController } from '@/renderer/hooks/chat/useSlashCommandController';
 import { openExternalUrl } from '@/renderer/utils/platform';
 import SlashCommandMenu, { type SlashCommandMenuItem } from '@/renderer/components/chat/SlashCommandMenu';
@@ -29,6 +30,7 @@ import { useTypewriterPlaceholder } from './hooks/useTypewriterPlaceholder';
 import { ensureBackendMcpCatalog } from '@/renderer/hooks/mcp/catalog';
 import { resolveGuidAssistantDefaults } from './utils/assistantDefaults';
 import SpeechInputButton from '@/renderer/components/chat/SpeechInputButton';
+import { chatFileRefPath, uploadFileRef } from '@/common/types/chatFile';
 import { useOpenFileSelector } from '@/renderer/hooks/file/useOpenFileSelector';
 import { appendSpeechTranscript } from '@/renderer/hooks/system/useSpeechInput';
 import { useLiveTranscriptInsertion } from '@/renderer/hooks/system/useLiveTranscriptInsertion';
@@ -39,6 +41,17 @@ import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import useSWR from 'swr';
 import styles from './index.module.css';
+
+type GuidNavigationState = {
+  resetAssistant?: boolean;
+  selectedAssistantId?: string;
+  prefillPrompt?: string;
+  prefillFiles?: string[];
+  preservePrefillDraft?: boolean;
+  focusPrefill?: boolean;
+  workspace?: string;
+  [key: string]: unknown;
+};
 
 const GuidPage: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -121,10 +134,7 @@ const GuidPage: React.FC = () => {
   // regular ACP backend with its own model selector).
   const modelSelection = useGuidModelSelection('aionrs');
 
-  const navState = location.state as {
-    resetAssistant?: boolean;
-    selectedAssistantId?: string;
-  } | null;
+  const navState = location.state as GuidNavigationState | null;
   const resetAssistantRequested = navState?.resetAssistant === true;
   const preselectAssistantId = navState?.selectedAssistantId;
   const agentSelection = useGuidAssistantSelection({
@@ -136,15 +146,14 @@ const GuidPage: React.FC = () => {
   const guidInput = useGuidInput({
     locationState: location.state as { workspace?: string } | null,
   });
-  const appendSelectedFiles = useCallback(
-    (files: string[]) => {
-      guidInput.setFiles((prevFiles) => [...prevFiles, ...files]);
-    },
-    [guidInput.setFiles]
-  );
+  // The `/open` builtin + attach picker browse the backend machine's filesystem
+  // (native dialog / server-fs) → `local` refs, not uploads.
   const { onSlashBuiltinCommand } = useOpenFileSelector({
-    onFilesSelected: appendSelectedFiles,
+    onFilesSelected: guidInput.handleFilesPicked,
   });
+  // Display/remove lanes stay path-based; the ref kind is carried only by the
+  // send path (useGuidSend).
+  const displayFilePaths = useMemo(() => guidInput.files.map(chatFileRefPath), [guidInput.files]);
 
   const resetMentionOpen = useCallback<React.Dispatch<React.SetStateAction<boolean>>>(() => {}, []);
   const resetMentionQuery = useCallback<React.Dispatch<React.SetStateAction<string | null>>>(() => {}, []);
@@ -253,7 +262,6 @@ const GuidPage: React.FC = () => {
     selectedMode: agentSelection.selectedMode,
     selectedAcpModel: agentSelection.selectedAcpModel,
     selectedThoughtLevelValue: agentSelection.selectedThoughtLevelValue,
-    currentAcpCachedModelInfo: agentSelection.currentAcpCachedModelInfo,
     current_model: modelSelection.current_model,
 
     guidDisabledBuiltinSkills,
@@ -293,11 +301,14 @@ const GuidPage: React.FC = () => {
 
       if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault();
-        if (!guidInput.input.trim()) return;
+        // Empty input is allowed — it creates an empty conversation ("start
+        // chat"). Mirror the send button's gate so Enter and click behave
+        // identically (blocked only while loading or with no assistant).
+        if (send.isButtonDisabled) return;
         send.sendMessageHandler();
       }
     },
-    [guidInput.input, send.sendMessageHandler, slashController]
+    [send.isButtonDisabled, send.sendMessageHandler, slashController]
   );
 
   const handleSelectAssistant = useCallback(
@@ -509,15 +520,22 @@ const GuidPage: React.FC = () => {
   // one such follow-up pass skip the clear, preserving the seeded prompt.
   const skipNextClearRef = useRef(false);
   useLayoutEffect(() => {
-    const prefillState = location.state as { prefillPrompt?: string; prefillFiles?: string[] } | null;
+    const prefillState = location.state as GuidNavigationState | null;
     const prefillPrompt = prefillState?.prefillPrompt;
     const prefillFiles = prefillState?.prefillFiles;
+    const preserveCurrentDraft = Boolean(prefillState?.preservePrefillDraft || skipNextClearRef.current);
     if (prefillPrompt && consumedPrefillKeyRef.current !== location.key) {
       // Consume prompt + optional attachments (e.g. bug-report screenshots) once.
       consumedPrefillKeyRef.current = location.key;
       skipNextClearRef.current = true;
-      guidInput.setInput(prefillPrompt);
-      guidInput.setFiles(prefillFiles && prefillFiles.length > 0 ? prefillFiles : []);
+      if (prefillState.preservePrefillDraft) {
+        guidInput.setInput((draft) => appendPromptToDraft(draft, prefillPrompt));
+      } else {
+        guidInput.setInput(prefillPrompt);
+        // Prefill attachments (e.g. "via chat" screenshots) arrive as bare paths
+        // with no source tag; treat them as uploads to preserve prior behavior.
+        guidInput.setFiles(prefillFiles && prefillFiles.length > 0 ? prefillFiles.map(uploadFileRef) : []);
+      }
     } else if (skipNextClearRef.current) {
       // This pass is the state-clearing replace() right after a prefill — keep
       // the seeded input instead of clearing it.
@@ -527,10 +545,29 @@ const GuidPage: React.FC = () => {
       guidInput.setFiles([]);
     }
     guidInput.setLoading(false);
-    if (!(location.state as { workspace?: string } | null)?.workspace) {
+    if (!preserveCurrentDraft && !(location.state as { workspace?: string } | null)?.workspace) {
       guidInput.setDir('');
     }
   }, [guidInput.setDir, guidInput.setFiles, guidInput.setInput, guidInput.setLoading, location.key, location.state]);
+
+  // A draft-preserving prefill is an action, not durable navigation state.
+  // Strip it after consumption so browser history or a remount cannot replay it.
+  useEffect(() => {
+    const prefillState = location.state as GuidNavigationState | null;
+    if (!prefillState?.preservePrefillDraft || !prefillState.prefillPrompt) return;
+
+    const {
+      prefillPrompt: _prefillPrompt,
+      prefillFiles: _prefillFiles,
+      preservePrefillDraft: _preservePrefillDraft,
+      focusPrefill: _focusPrefill,
+      ...remainingState
+    } = prefillState;
+    navigate(`${location.pathname}${location.search}${location.hash}`, {
+      replace: true,
+      state: Object.keys(remainingState).length > 0 ? remainingState : null,
+    });
+  }, [location.hash, location.pathname, location.search, location.state, navigate]);
 
   // Clear resetAssistant from location.state after the hook has consumed it,
   // so that re-renders don't re-trigger the reset logic.
@@ -577,8 +614,9 @@ const GuidPage: React.FC = () => {
   // Build the action row
   const actionRowNode = (
     <GuidActionRow
-      files={guidInput.files}
+      files={displayFilePaths}
       onFilesUploaded={guidInput.handleFilesUploaded}
+      onFilesPicked={guidInput.handleFilesPicked}
       modelSelectorNode={modelSelectorNode}
       isGeminiMode={isGeminiMode}
       modelList={modelSelection.modelList}
@@ -601,11 +639,7 @@ const GuidPage: React.FC = () => {
       selectedMcpServerIds={guidSelectedMcpServerIds ?? []}
       onToggleMcpServer={handleToggleMcpServer}
       speechInputNode={
-        <SpeechInputButton
-          disabled={guidInput.loading}
-          onLiveTranscript={handleLiveTranscript}
-          onTranscript={handleSpeechTranscript}
-        />
+        <SpeechInputButton onLiveTranscript={handleLiveTranscript} onTranscript={handleSpeechTranscript} />
       }
       loading={guidInput.loading}
       isButtonDisabled={send.isButtonDisabled}
@@ -635,7 +669,7 @@ const GuidPage: React.FC = () => {
       <div ref={guidContainerRef} className={styles.guidContainer}>
         <div className={styles.guidLayout}>
           <div className={styles.heroHeader}>
-            <p className='text-2xl font-semibold mb-0 text-0 text-center'>{t('conversation.welcome.title')}</p>
+            <p className='text-2xl font-semibold mb-0 text-t-primary text-center'>{t('conversation.welcome.title')}</p>
           </div>
 
           <AssistantSelectionArea
@@ -646,6 +680,7 @@ const GuidPage: React.FC = () => {
           />
 
           <GuidInputCard
+            focusRequestKey={navState?.focusPrefill && navState.prefillPrompt ? location.key : undefined}
             input={guidInput.input}
             onInputChange={handleInputChange}
             onKeyDown={handleInputKeyDown}
@@ -659,7 +694,7 @@ const GuidPage: React.FC = () => {
             inactiveBorderColor={inactiveBorderColor}
             activeShadow={activeShadow}
             dragHandlers={guidInput.dragHandlers}
-            files={guidInput.files}
+            files={displayFilePaths}
             onRemoveFile={guidInput.handleRemoveFile}
             actionRow={actionRowNode}
             slashCommandMenu={slashCommandMenuNode}
@@ -669,8 +704,8 @@ const GuidPage: React.FC = () => {
           />
 
           {selectedAssistantPrompts.length > 0 ? (
-            <div className='mt-18px w-full animate-fade-in pl-20px'>
-              <div className={`${styles.assistantPromptHint} mb-10px text-left`}>
+            <div className='mt-18px w-full animate-fade-in ps-20px'>
+              <div className={`${styles.assistantPromptHint} mb-10px text-start`}>
                 {t('guid.promptExamplesHint', { defaultValue: 'Try these example prompts:' })}
               </div>
               <div className='flex flex-col gap-9px'>
@@ -678,7 +713,7 @@ const GuidPage: React.FC = () => {
                   <Button
                     key={`${index}-${prompt}`}
                     type='text'
-                    className='group !h-auto !w-full !border-none !bg-transparent !px-0 !py-6px !text-left !text-12.5px !text-t-secondary !whitespace-normal !break-words transition-colors hover:!bg-transparent hover:!text-t-primary'
+                    className='group !h-auto !w-full !border-none !bg-transparent !px-0 !py-6px !text-start !text-12.5px !text-t-secondary !whitespace-normal !break-words transition-colors hover:!bg-transparent hover:!text-t-primary'
                     onClick={() => {
                       guidInput.setInput(prompt);
                       guidInput.handleTextareaFocus();
@@ -688,7 +723,7 @@ const GuidPage: React.FC = () => {
                     <ArrowRightUp
                       theme='outline'
                       size='13'
-                      className='ml-6px inline-flex flex-shrink-0 align-[-1px] text-t-primary opacity-0 transition-opacity group-hover:opacity-100'
+                      className='ms-6px inline-flex flex-shrink-0 align-[-1px] text-t-primary opacity-0 transition-opacity group-hover:opacity-100'
                     />
                   </Button>
                 ))}

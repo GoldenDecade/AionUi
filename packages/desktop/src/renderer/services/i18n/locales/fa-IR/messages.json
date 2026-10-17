@@ -1,6 +1,8 @@
 {
   "fileChanges": "تغییرات فایل",
   "fileChangesCount": "{{count}} تغییر فایل",
+  "fileChangesCount_one": "{{count}} تغییر فایل",
+  "fileChangesCount_other": "{{count}} تغییر فایل",
   "conversationInProgress": "در حال حاضر گفتگویی در جریان است...",
   "confirm": "تأیید",
   "canceledExecution": "اجرا لغو شد",
@@ -16,10 +18,20 @@
   "downloadFailed": "دانلود ناموفق بود",
   "imageLoadFailed": "بارگذاری تصویر ناموفق بود",
   "scrollToBottom": "اسکرول به انتها",
+  "anchorRail": {
+    "label": "لنگرهای پیام‌های گفتگو",
+    "tickAria": "رفتن به پیام {{index}}",
+    "searchAria": "جست‌وجو در گفتگو"
+  },
   "availableCommands": "{{count}} دستور موجود",
+  "availableCommands_one": "{{count}} دستور موجود",
+  "availableCommands_other": "{{count}} دستور موجود",
   "atFile.hint": "برای جستجوی فایل‌ها تایپ کنید",
   "atFile.menuLabel": "اشاره به فایل‌ها",
   "atFile.loading": "در حال بارگذاری...",
+  "atSession.hint": "برای جست‌وجوی گفتگوها تایپ کنید",
+  "atSession.empty": "گفتگویی یافت نشد",
+  "atSession.menuLabel": "اشاره به گفتگو",
   "slash.title": "دستورات",
   "slash.hint": "برای باز کردن منوی دستورات / تایپ کنید",
   "slash.empty": "دستوری پیدا نشد",
@@ -56,6 +68,7 @@
   "noOptionsAvailable": "گزینه‌ای در دسترس نیست",
   "processing": "در حال پردازش...",
   "responseSentSuccessfully": "پاسخ با موفقیت ارسال شد",
+  "permissionResponseFailed": "ارسال پاسخ ممکن نشد. دوباره تلاش کنید.",
   "confirmation": {
     "applyChange": "این تغییر اعمال شود؟",
     "allowExecution": "اجرا مجاز باشد؟",
@@ -66,5 +79,23 @@
     "yesAlwaysAllowTool": "بله، همیشه اجازه ابزار «{{toolName}}» از سرور «{{serverName}}» بده",
     "yesAlwaysAllowServer": "بله، همیشه اجازه تمام ابزارها از سرور «{{serverName}}» بده",
     "no": "خیر (esc)"
+  },
+  "fork": {
+    "action": "انشعاب از اینجا",
+    "errorTurnInFlight": "پیش از انشعاب صبر کنید تا پاسخ فعلی کامل شود",
+    "errorParentUnbound": "این گفتگو هنوز نشست پشتیبانی برای انشعاب ندارد",
+    "errorPointUnsupported": "این عامل فقط از آخرین پیام می‌تواند انشعاب بگیرد",
+    "errorUnsupported": "این عامل از انشعاب پشتیبانی نمی‌کند",
+    "errorGeneric": "انشعاب ناموفق بود: {{message}}"
+  },
+  "askSubmit": "ارسال",
+  "askDecline": "پاسخ ندادن",
+  "askAnswered": "پاسخ داده شد",
+  "askDeclined": "رد شد",
+  "askOther": "سایر",
+  "askOtherPlaceholder": "پاسخ خود را بنویسید",
+  "requestDetails": "جزئیات درخواست:",
+  "delivery": {
+    "pending": "خوانده‌نشده"
   }
 }

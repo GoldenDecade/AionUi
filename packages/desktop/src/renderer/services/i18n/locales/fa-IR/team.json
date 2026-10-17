@@ -15,7 +15,10 @@
     "renameOk": "ذخیره",
     "renameCancel": "لغو",
     "renameSuccess": "نام تیم تغییر کرد",
-    "deleteSuccess": "تیم حذف شد"
+    "deleteSuccess": "تیم حذف شد",
+    "archive": "Archive",
+    "archiveSuccess": "Team archived",
+    "archiveFailed": "Failed to archive team"
   },
   "newAgent": "عامل جدید",
   "noMessages": "هنوز پیامی وجود ندارد.",
@@ -27,7 +30,8 @@
     "runtimeStarting": "در انتظار راه‌اندازی این عضو…",
     "runtimeFailed": "راه‌اندازی این عضو ناموفق بود.",
     "removing": "در حال حذف این عضو…",
-    "sessionStopped": "نشست تیم متوقف شده است."
+    "sessionStopped": "نشست تیم متوقف شده است.",
+    "retryStart": "تلاش مجدد برای شروع"
   },
   "sendBox": {
     "placeholder": "ارسال پیام به عامل ارسال..."
@@ -100,7 +104,8 @@
   "view": {
     "label": "View",
     "parallel": "Parallel",
-    "single": "Single"
+    "single": "Single",
+    "board": "تابلو"
   },
   "warmup": {
     "title": "Waking up the team…",
@@ -115,5 +120,74 @@
     "leaderFailedHint": "Switch its model above, then retry.",
     "retry": "Retry"
   },
-  "reorderMember": "برای تغییر ترتیب عضو بکشید"
+  "reorderMember": "برای تغییر ترتیب عضو بکشید",
+  "interruptAndSend": "توقف و ارسال",
+  "interruptAgentFailed": "توقف عامل ناموفق بود. دوباره تلاش کنید.",
+  "agentActions": {
+    "label": "عملیات عامل",
+    "reconnectDescription": "فرایند عامل را دوباره راه‌اندازی می‌کند و زمینه فعلی را نگه می‌دارد.",
+    "disabled": {
+      "initializing": "عامل در حال آماده‌سازی است.",
+      "busy": "منتظر بمانید پاسخ فعلی و کارهای صف‌شده تمام شوند.",
+      "dormant": "ابتدا این عضو را بیدار کنید.",
+      "failed": "ابتدا راه‌اندازی این عضو را دوباره امتحان کنید.",
+      "removing": "این عضو در حال حذف شدن است.",
+      "sessionStopped": "نشست تیم متوقف شده است.",
+      "unsupported": "این عامل از شروع زمینه جدید پشتیبانی نمی‌کند.",
+      "leaderNotTargetable": "برای رهبر تیم نمی‌توان زمینه جدیدی آغاز کرد."
+    },
+    "contextReset": {
+      "title": "شروع زمینه جدید",
+      "description": "یک نشست پشتیبان جدید می‌سازد. تاریخچه گفتگو و وظایف حفظ می‌شوند.",
+      "confirmTitle": "برای {{memberName}} زمینه جدیدی آغاز شود؟",
+      "confirmContent": "نشست فعلی عامل متوقف می‌شود و با پیام بعدی یک نشست پشتیبان جدید ساخته خواهد شد. تاریخچه گفتگو، وظایف، فایل‌ها، مدل و تنظیمات عضو حفظ می‌شوند، اما عامل دیگر زمینه استدلال نشست قبلی را نخواهد داشت.",
+      "confirm": "شروع زمینه جدید",
+      "success": "برای {{memberName}} زمینه جدید آغاز شد.",
+      "partialSuccess": "زمینه {{memberName}} بازنشانی شد، اما عامل دوباره راه‌اندازی نشد. از «تلاش دوباره برای شروع» استفاده کنید.",
+      "notApplied": "زمینه جدید آغاز نشد. زمینه فعلی حفظ شد.",
+      "failed": "شروع زمینه جدید ناموفق بود. دوباره تلاش کنید."
+    }
+  },
+  "systemNotice": {
+    "sender": "تیم",
+    "contextResetSuccess": "برای {{memberName}} زمینه جدید آغاز شد.",
+    "contextResetRuntimeFailed": "زمینه {{memberName}} بازنشانی شد، اما عامل دوباره راه‌اندازی نشد."
+  },
+  "activity": {
+    "control": {
+      "sortNewest": "جدیدترین",
+      "sortOldest": "قدیمی‌ترین",
+      "filterAll": "همه",
+      "filterMessages": "پیام‌ها",
+      "filterTasks": "وظایف",
+      "allMembers": "همه اعضا",
+      "showSystem": "پیام‌های سیستمی",
+      "showTerminal": "وظایف پایان‌یافته"
+    },
+    "fallbackLane": "بدون تخصیص / خارجی",
+    "empty": "هنوز فعالیتی نیست",
+    "userIdentity": "کاربر / خارجی",
+    "broadcast": "ارسال همگانی",
+    "read": "خوانده‌شده",
+    "unread": "خوانده‌نشده",
+    "attachments": "{{count}} پیوست",
+    "attachments_one": "{{count}} پیوست",
+    "attachments_other": "{{count}} پیوست",
+    "expand": "گسترش",
+    "collapse": "جمع کردن",
+    "blockedBy": "مسدود شده توسط #{{id}}",
+    "blockedByNamed": "مسدود شده توسط {{name}}",
+    "blockerUnknown": "وظیفه در دسترس نیست",
+    "status": {
+      "pending": "در انتظار",
+      "in_progress": "در حال انجام",
+      "completed": "انجام‌شده",
+      "deleted": "حذف‌شده"
+    },
+    "msgType": {
+      "message": "پیام",
+      "idle_notification": "اعلان بی‌کاری",
+      "shutdown_request": "درخواست توقف"
+    }
+  }
 }

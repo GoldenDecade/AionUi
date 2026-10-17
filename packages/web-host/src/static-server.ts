@@ -7,6 +7,12 @@
  * /api/auth/*. /ws and /api/stt/stream are WebSocket/stream upgrades spliced at
  * TCP level; /api/stt/stream is the STT streaming endpoint.
  *
+ * Access gate: aioncore runs with `--local` (auth disabled) because the desktop
+ * renderer talks to it directly without credentials. Only WebUI browser clients
+ * come through this server, so it enforces login itself: desktop-only management
+ * routes are denied, and every other /api/* call or upgrade must carry a session
+ * that aioncore's /api/auth/user accepts.
+ *
  * Design: Node native http + serve-handler. No Express. No business routes.
  */
 
@@ -33,14 +39,162 @@ export type StaticServerHandle = {
 
 const DEFAULT_PORT = 25808;
 
-function getLanIP(): string | null {
-  const nets = networkInterfaces();
+// Ranges that are non-internal IPv4 yet never a reachable LAN address, so we
+// must never advertise them as the WebUI access URL even when they are the only
+// non-loopback interface present:
+//   169.254.0.0/16  link-local / APIPA (host got no DHCP lease)
+//   198.18.0.0/15   RFC 2544 benchmarking range — handed out by utility tunnels
+//                   such as Cloudflare WARP; this is the address that showed up
+//                   on a multi-NIC machine instead of the real LAN IP.
+const isUnreachableLanRange = (addr: string): boolean => addr.startsWith('169.254.') || /^198\.(18|19)\./.test(addr);
+
+// Rank candidate LAN addresses by how likely they are the network the user
+// actually reaches the desktop on. Lower is better. Private (RFC 1918) home /
+// office ranges win over anything else; 192.168/16 is the most common LAN, then
+// the 172.16/12 block, then 10/8 (frequently carved up by VPNs / corp routing).
+const rankLanCandidate = (addr: string): number => {
+  if (addr.startsWith('192.168.')) return 0;
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(addr)) return 1;
+  if (addr.startsWith('10.')) return 2;
+  return 3;
+};
+
+// Pick the best LAN IPv4 to advertise. Pure over the interface map so it can be
+// unit-tested against real multi-NIC layouts. Iterating and returning the first
+// non-internal hit (the old behavior) picks whatever the OS lists first, which
+// on a multi-NIC box can be a VPN / benchmark adapter rather than the LAN.
+export function pickLanIP(nets: ReturnType<typeof networkInterfaces>): string | null {
+  const candidates: string[] = [];
   for (const name of Object.keys(nets)) {
     for (const iface of nets[name] || []) {
-      if (iface.family === 'IPv4' && !iface.internal) return iface.address;
+      if (iface.family !== 'IPv4' || iface.internal) continue;
+      if (isUnreachableLanRange(iface.address)) continue;
+      candidates.push(iface.address);
     }
   }
-  return null;
+  // Stable sort keeps OS interface order among equally-ranked addresses (e.g. a
+  // physical NIC listed before a VPN when both are 10/8).
+  candidates.sort((a, b) => rankLanCandidate(a) - rankLanCandidate(b));
+  return candidates[0] ?? null;
+}
+
+function getLanIP(): string | null {
+  return pickLanIP(networkInterfaces());
+}
+
+export type AccessPolicy = 'public' | 'session' | 'deny';
+
+// Reachable without a session: the login flow and the session probe itself.
+const PUBLIC_PATHS = new Set(['/login', '/logout', '/api/auth/status', '/api/auth/user', '/api/auth/refresh']);
+// Desktop-only routes (password reset, QR tokens, internal user admin) and the
+// QR login exchange. aioncore answers them unauthenticated in `--local` mode,
+// so WebUI clients must never reach them.
+const DENY_PREFIXES = ['/api/webui', '/api/auth/internal', '/api/auth/qr-login'];
+
+const UNAUTHORIZED_BODY = JSON.stringify({ success: false, error: 'Authentication required', code: 'UNAUTHORIZED' });
+const FORBIDDEN_BODY = JSON.stringify({ success: false, error: 'Forbidden.', code: 'FORBIDDEN' });
+const RATE_LIMITED_BODY = JSON.stringify({ success: false, error: 'Rate limited', code: 'RATE_LIMITED' });
+
+/**
+ * Classify a request URL for the WebUI access gate. The path is decoded and
+ * slash-collapsed first so encoded or doubled segments cannot dodge the deny list.
+ */
+export function classifyRequest(url: string): AccessPolicy {
+  let path = url.split('?')[0];
+  try {
+    path = decodeURIComponent(path);
+  } catch {
+    return 'deny';
+  }
+  path = path.replace(/\/{2,}/g, '/').toLowerCase();
+  if (DENY_PREFIXES.some((prefix) => path.startsWith(prefix))) return 'deny';
+  if (PUBLIC_PATHS.has(path)) return 'public';
+  if (path === '/api' || path.startsWith('/api/') || path === '/ws') return 'session';
+  return 'public';
+}
+
+/** Ask aioncore's /api/auth/user about a credential; resolves to its HTTP status (401 on transport failure). */
+function probeSession(forwarded: http.OutgoingHttpHeaders, backendPort: number): Promise<number> {
+  return new Promise((resolve) => {
+    const probe = http.request(
+      {
+        hostname: '127.0.0.1',
+        port: backendPort,
+        path: '/api/auth/user',
+        method: 'GET',
+        headers: forwarded,
+        timeout: 5000,
+      },
+      (res) => {
+        res.resume();
+        resolve(res.statusCode ?? 401);
+      }
+    );
+    probe.on('timeout', () => probe.destroy());
+    probe.on('error', () => resolve(401));
+    probe.end();
+  });
+}
+
+// aioncore rate-limits /api/auth/user, so a page load's burst of parallel calls
+// must not each probe it: requests with the same credential share one in-flight
+// probe, and a confirmed session is trusted for a short window.
+const SESSION_CACHE_TTL_MS = 10_000;
+const SESSION_CACHE_MAX = 500;
+
+type SessionChecker = (headers: http.IncomingHttpHeaders) => Promise<number>;
+
+function createSessionChecker(backendPort: number): SessionChecker {
+  const cache = new Map<string, { status: Promise<number>; expiresAt: number }>();
+  return (headers) => {
+    const forwarded: http.OutgoingHttpHeaders = {};
+    if (headers.cookie) forwarded.cookie = headers.cookie;
+    if (headers.authorization) forwarded.authorization = headers.authorization;
+    if (!forwarded.cookie && !forwarded.authorization) return Promise.resolve(401);
+
+    const key = `${headers.cookie ?? ''}\n${headers.authorization ?? ''}`;
+    const now = Date.now();
+    const hit = cache.get(key);
+    if (hit && hit.expiresAt > now) return hit.status;
+
+    if (cache.size >= SESSION_CACHE_MAX) {
+      for (const [k, v] of cache) if (v.expiresAt <= now) cache.delete(k);
+    }
+    const entry = { status: probeSession(forwarded, backendPort), expiresAt: now + SESSION_CACHE_TTL_MS };
+    cache.set(key, entry);
+    // Only a confirmed session stays cached; a failure must re-probe so a fresh
+    // login or a retry after rate limiting takes effect immediately.
+    void entry.status.then((status) => {
+      if (status !== 200 && cache.get(key) === entry) cache.delete(key);
+    });
+    return entry.status;
+  };
+}
+
+/** Map a failed session probe to the gate's response: keep 429 so clients back off instead of re-logging in. */
+function rejectionFor(status: number): { status: number; body: string } {
+  return status === 429 ? { status: 429, body: RATE_LIMITED_BODY } : { status: 401, body: UNAUTHORIZED_BODY };
+}
+
+/** Parse the header block of a peeked raw HTTP request (keys lower-cased). */
+function parseRawHeaders(buf: Buffer): http.IncomingHttpHeaders {
+  const end = buf.indexOf('\r\n\r\n');
+  const lines = buf
+    .slice(0, end < 0 ? buf.length : end)
+    .toString('latin1')
+    .split('\r\n')
+    .slice(1);
+  const headers: Record<string, string> = {};
+  for (const line of lines) {
+    const idx = line.indexOf(':');
+    if (idx > 0) headers[line.slice(0, idx).trim().toLowerCase()] = line.slice(idx + 1).trim();
+  }
+  return headers;
+}
+
+function writeJson(res: ServerResponse, status: number, body: string): void {
+  res.writeHead(status, { 'content-type': 'application/json' });
+  res.end(body);
 }
 
 function forwardToBackend(req: IncomingMessage, res: ServerResponse, backendPort: number): void {
@@ -81,6 +235,15 @@ function spliceToTcpEndpoint(client: Socket, targetPort: number, initialBytes: B
   client.setNoDelay(true);
   client.setKeepAlive(true);
   client.setTimeout(0);
+  // The peek phase left `client` in flowing mode (it had a 'data' listener),
+  // but that listener is now removed and the real consumer — `client.pipe(upstream)`
+  // — is only wired inside the async 'connect' handler below. Pause here so any
+  // body bytes arriving in the gap are buffered by the socket instead of being
+  // dropped for lack of a consumer; `pipe()` resumes the socket once connected.
+  // Without this, large/buffered uploads (e.g. reverse-proxied POST bodies that
+  // span multiple TCP segments) lose their tail bytes and the backend hangs
+  // forever waiting for the missing Content-Length (issue #4058).
+  client.pause();
   const upstream = net.connect({ host: '127.0.0.1', port: targetPort });
   upstream.setNoDelay(true);
   upstream.setKeepAlive(true);
@@ -121,6 +284,7 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
   const port = opts.port ?? DEFAULT_PORT;
   const allowRemote = opts.allowRemote === true;
   const host = allowRemote ? '0.0.0.0' : '127.0.0.1';
+  const checkSession = createSessionChecker(opts.backendPort);
 
   // The HTTP server listens only on loopback — user traffic hits the outer
   // net.Server first. We route to this server for everything except WS
@@ -136,6 +300,20 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
       if (!req.url || !req.method) {
         res.writeHead(400).end();
         return;
+      }
+
+      const policy = classifyRequest(req.url);
+      if (policy === 'deny') {
+        writeJson(res, 403, FORBIDDEN_BODY);
+        return;
+      }
+      if (policy === 'session') {
+        const sessionStatus = await checkSession(req.headers);
+        if (sessionStatus !== 200) {
+          const rejection = rejectionFor(sessionStatus);
+          writeJson(res, rejection.status, rejection.body);
+          return;
+        }
       }
 
       // /api/* — reverse proxy to backend (includes /api/auth/*).
@@ -192,9 +370,30 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
       peeked = Buffer.concat([peeked, chunk]);
       const decision = peekWsRoute(peeked);
       if (decision === null && peeked.length < PEEK_LIMIT_BYTES) return;
+      // Upgrades skip the internal HTTP server, so wait for the full header
+      // block and check the session here before splicing to the backend.
+      if (decision === true && peeked.indexOf('\r\n\r\n') < 0 && peeked.length < PEEK_LIMIT_BYTES) return;
       cleanup();
-      const target = decision === true ? opts.backendPort : internalPort;
-      spliceToTcpEndpoint(client, target, peeked);
+      if (decision !== true) {
+        spliceToTcpEndpoint(client, internalPort, peeked);
+        return;
+      }
+      client.pause();
+      client.on('error', () => client.destroy());
+      void checkSession(parseRawHeaders(peeked)).then((sessionStatus) => {
+        if (sessionStatus === 200) {
+          spliceToTcpEndpoint(client, opts.backendPort, peeked);
+          return;
+        }
+        const rejection = rejectionFor(sessionStatus);
+        client.end(
+          `HTTP/1.1 ${rejection.status} ${http.STATUS_CODES[rejection.status]}\r\n` +
+            'Content-Type: application/json\r\n' +
+            `Content-Length: ${Buffer.byteLength(rejection.body)}\r\n` +
+            'Connection: close\r\n\r\n' +
+            rejection.body
+        );
+      });
     };
     const onEarlyError = (): void => {
       cleanup();

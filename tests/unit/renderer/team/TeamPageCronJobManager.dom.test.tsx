@@ -80,6 +80,7 @@ vi.mock('@/common', () => ({
       childTurnStarted: makeTeamEventChannel('childTurnStarted'),
       childTurnCompleted: makeTeamEventChannel('childTurnCompleted'),
       childTurnCancelled: makeTeamEventChannel('childTurnCancelled'),
+      slotWorkChanged: makeTeamEventChannel('slotWorkChanged'),
       listChanged: makeTeamEventChannel('listChanged'),
     },
     cron: {
@@ -89,6 +90,7 @@ vi.mock('@/common', () => ({
       list: { invoke: vi.fn(async () => []) },
     },
     conversation: {
+      listChanged: makeTeamEventChannel('conversationListChanged'),
       confirmation: {
         list: { invoke: vi.fn(async () => []) },
         add: makeTeamEventChannel('confirmationAdd'),
@@ -140,7 +142,7 @@ vi.mock('@/renderer/pages/cron', () => ({
 }));
 
 vi.mock('@/renderer/pages/conversation/Preview/context/PreviewContext', () => ({
-  usePreviewContext: () => ({ closePreview: () => {}, closePreviewIfWorkspaceChanged: () => {} }),
+  usePreviewContext: () => ({ closePreview: () => {}, closePreviewIfScopeChanged: () => {} }),
 }));
 
 import { ipcBridge } from '@/common';
@@ -264,6 +266,7 @@ function team(): TTeam {
         assistant_backend: 'codex',
         assistant_name: 'Leader',
         status: 'idle',
+        context_reset: { supported: false, availability: 'leader_not_targetable' },
       },
       {
         slot_id: 'member-slot',
@@ -272,6 +275,7 @@ function team(): TTeam {
         assistant_backend: 'codex',
         assistant_name: 'Member',
         status: 'idle',
+        context_reset: { supported: true, availability: 'ready' },
       },
     ],
   };

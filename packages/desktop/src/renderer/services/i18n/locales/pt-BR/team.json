@@ -15,7 +15,10 @@
     "renameOk": "Salvar",
     "renameCancel": "Cancelar",
     "renameSuccess": "Equipe renomeada",
-    "deleteSuccess": "Equipe excluída"
+    "deleteSuccess": "Equipe excluída",
+    "archive": "Archive",
+    "archiveSuccess": "Team archived",
+    "archiveFailed": "Failed to archive team"
   },
   "newAgent": "Novo Assistente",
   "noMessages": "Nenhuma mensagem ainda.",
@@ -27,7 +30,8 @@
     "runtimeStarting": "Aguardando este membro iniciar…",
     "runtimeFailed": "Não foi possível iniciar este membro.",
     "removing": "Removendo este membro…",
-    "sessionStopped": "A sessão da equipe foi encerrada."
+    "sessionStopped": "A sessão da equipe foi encerrada.",
+    "retryStart": "Tentar iniciar novamente"
   },
   "sendBox": {
     "placeholder": "Enviar mensagem ao assistente líder da equipe..."
@@ -100,7 +104,8 @@
   "view": {
     "label": "View",
     "parallel": "Parallel",
-    "single": "Single"
+    "single": "Single",
+    "board": "Quadro"
   },
   "warmup": {
     "title": "Waking up the team…",
@@ -115,5 +120,74 @@
     "leaderFailedHint": "Switch its model above, then retry.",
     "retry": "Retry"
   },
-  "reorderMember": "Arraste para reordenar o membro"
+  "reorderMember": "Arraste para reordenar o membro",
+  "interruptAndSend": "Interromper e enviar",
+  "interruptAgentFailed": "Não foi possível interromper o agente. Tente novamente.",
+  "agentActions": {
+    "label": "Ações do agente",
+    "reconnectDescription": "Reinicia o processo do agente e mantém o contexto atual.",
+    "disabled": {
+      "initializing": "O agente está inicializando.",
+      "busy": "Aguarde a resposta atual e o trabalho na fila terminarem.",
+      "dormant": "Ative este membro primeiro.",
+      "failed": "Tente iniciar este membro novamente primeiro.",
+      "removing": "Este membro está sendo removido.",
+      "sessionStopped": "A sessão da equipe foi encerrada.",
+      "unsupported": "Este agente não oferece suporte a um novo contexto.",
+      "leaderNotTargetable": "Não é possível iniciar um novo contexto para o líder da equipe."
+    },
+    "contextReset": {
+      "title": "Iniciar novo contexto",
+      "description": "Cria uma nova sessão de backend. O histórico e as tarefas são mantidos.",
+      "confirmTitle": "Iniciar um novo contexto para {{memberName}}?",
+      "confirmContent": "A sessão atual do agente será encerrada e uma nova sessão de backend será criada com a próxima mensagem. O histórico, as tarefas, os arquivos, o modelo e as configurações do membro serão mantidos, mas o agente perderá o contexto de raciocínio da sessão anterior.",
+      "confirm": "Iniciar novo contexto",
+      "success": "Um novo contexto foi iniciado para {{memberName}}.",
+      "partialSuccess": "O contexto de {{memberName}} foi redefinido, mas o agente não reiniciou. Use “Tentar iniciar novamente”.",
+      "notApplied": "Não foi possível iniciar um novo contexto. O contexto atual foi mantido.",
+      "failed": "Falha ao iniciar um novo contexto. Tente novamente."
+    }
+  },
+  "systemNotice": {
+    "sender": "Equipe",
+    "contextResetSuccess": "Um novo contexto foi iniciado para {{memberName}}.",
+    "contextResetRuntimeFailed": "O contexto de {{memberName}} foi redefinido, mas o agente não reiniciou."
+  },
+  "activity": {
+    "control": {
+      "sortNewest": "Mais recente",
+      "sortOldest": "Mais antigo",
+      "filterAll": "Tudo",
+      "filterMessages": "Mensagens",
+      "filterTasks": "Tarefas",
+      "allMembers": "Todos os membros",
+      "showSystem": "Mensagens do sistema",
+      "showTerminal": "Tarefas concluídas"
+    },
+    "fallbackLane": "Não atribuído / externo",
+    "empty": "Sem atividade",
+    "userIdentity": "Usuário / externo",
+    "broadcast": "Transmitir a todos",
+    "read": "Lido",
+    "unread": "Não lido",
+    "attachments": "{{count}} arquivos",
+    "attachments_one": "{{count}} arquivo",
+    "attachments_other": "{{count}} arquivos",
+    "expand": "Expandir",
+    "collapse": "Recolher",
+    "blockedBy": "bloqueado por #{{id}}",
+    "blockedByNamed": "bloqueado por {{name}}",
+    "blockerUnknown": "Tarefa indisponível",
+    "status": {
+      "pending": "Pendente",
+      "in_progress": "Em andamento",
+      "completed": "Concluído",
+      "deleted": "Excluído"
+    },
+    "msgType": {
+      "message": "Mensagem",
+      "idle_notification": "Aviso de inatividade",
+      "shutdown_request": "Pedido de encerramento"
+    }
+  }
 }

@@ -70,13 +70,28 @@ describe('PreviewContext', () => {
     expect(result.current.tabs[0].content_type).toBe('markdown');
   });
 
-  it('closes preview and clears all tabs', () => {
+  // `closePreview` hides the panel and KEEPS the tabs. It used to also empty them,
+  // which propagated to storage and wiped the whole project's remembered tab list —
+  // see clearPreviewForScope for the discarding variant.
+  it('closes the panel but keeps its tabs', () => {
     const { result } = renderHook(() => usePreviewContext(), { wrapper });
     act(() => {
       result.current.openPreview('content', 'code');
     });
     act(() => {
       result.current.closePreview();
+    });
+    expect(result.current.isOpen).toBe(false);
+    expect(result.current.tabs).toHaveLength(1);
+  });
+
+  it('discards tabs only when asked to explicitly', () => {
+    const { result } = renderHook(() => usePreviewContext(), { wrapper });
+    act(() => {
+      result.current.openPreview('content', 'code');
+    });
+    act(() => {
+      result.current.clearPreviewForScope();
     });
     expect(result.current.isOpen).toBe(false);
     expect(result.current.tabs).toEqual([]);
@@ -101,5 +116,57 @@ describe('PreviewContext', () => {
     });
     expect(result.current.activeTab?.content).toBe('modified');
     expect(result.current.activeTab?.isDirty).toBe(true);
+  });
+
+  it('starts non-maximized and toggles the maximized flag', () => {
+    const { result } = renderHook(() => usePreviewContext(), { wrapper });
+    expect(result.current.isMaximized).toBe(false);
+    act(() => {
+      result.current.toggleMaximized();
+    });
+    expect(result.current.isMaximized).toBe(true);
+    act(() => {
+      result.current.toggleMaximized();
+    });
+    expect(result.current.isMaximized).toBe(false);
+  });
+
+  it('resets maximized when the panel is collapsed', () => {
+    const { result } = renderHook(() => usePreviewContext(), { wrapper });
+    act(() => {
+      result.current.openPreview('content', 'code');
+      result.current.toggleMaximized();
+    });
+    expect(result.current.isMaximized).toBe(true);
+    act(() => {
+      result.current.closePreview();
+    });
+    expect(result.current.isMaximized).toBe(false);
+  });
+
+  it('resets maximized when tabs are discarded for the scope', () => {
+    const { result } = renderHook(() => usePreviewContext(), { wrapper });
+    act(() => {
+      result.current.openPreview('content', 'code');
+      result.current.toggleMaximized();
+    });
+    expect(result.current.isMaximized).toBe(true);
+    act(() => {
+      result.current.clearPreviewForScope();
+    });
+    expect(result.current.isMaximized).toBe(false);
+  });
+
+  it('resets maximized when switching to a different preview scope', () => {
+    const { result } = renderHook(() => usePreviewContext(), { wrapper });
+    act(() => {
+      result.current.openPreview('content', 'code');
+      result.current.toggleMaximized();
+    });
+    expect(result.current.isMaximized).toBe(true);
+    act(() => {
+      result.current.closePreviewIfScopeChanged('project:some-other-project' as PreviewScopeKey);
+    });
+    expect(result.current.isMaximized).toBe(false);
   });
 });

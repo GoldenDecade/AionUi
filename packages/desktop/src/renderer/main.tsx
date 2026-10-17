@@ -38,10 +38,15 @@ import './utils/ui/runtimePatches';
 // Browser adapter setup
 import '@/common/adapter/browser';
 
+// WebUI only: serve `dialog.showOpen` with a server-side picker, since the
+// native Electron dialog channel has no provider outside the desktop app.
+import './components/workspace/registerWebFsPicker';
+
 // React and core dependencies
 import type { PropsWithChildren } from 'react';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { SWRConfig } from 'swr';
 import type { TFunction } from 'i18next';
 
 // Context providers
@@ -60,6 +65,12 @@ import jaJP from '@arco-design/web-react/es/locale/ja-JP';
 import zhCN from '@arco-design/web-react/es/locale/zh-CN';
 import zhTW from '@arco-design/web-react/es/locale/zh-TW';
 import koKR from '@arco-design/web-react/es/locale/ko-KR';
+import trTR from '@arco-design/web-react/es/locale/tr-TR';
+import ruRU from '@arco-design/web-react/es/locale/ru-RU';
+import ptBR from '@arco-design/web-react/es/locale/pt-BR';
+import deDE from '@arco-design/web-react/es/locale/de-DE';
+import esES from '@arco-design/web-react/es/locale/es-ES';
+import frFR from '@arco-design/web-react/es/locale/fr-FR';
 import { useTranslation } from 'react-i18next';
 
 // Styles
@@ -78,6 +89,7 @@ configService.initialize().catch((err) => {
 
 // i18n
 import './services/i18n';
+import { isRtlLanguage } from './services/i18n/direction';
 import { registerPwa } from './services/registerPwa';
 
 import { ipcBridge } from '@/common';
@@ -85,6 +97,9 @@ import { repairAllCronJobTimeZonesOnce } from '@renderer/pages/cron/repairCronJo
 import { bootstrapRendererConfig } from '@renderer/services/bootstrapRenderer';
 
 // Components and utilities
+import BackendStartingView from './components/layout/BackendStartingView';
+import BackendStartupGate from './components/layout/BackendStartupGate';
+import GpuAutoDisableNotice from './components/layout/GpuAutoDisableNotice';
 import Layout from './components/layout/Layout';
 import Router from './components/layout/Router';
 import Sider from './components/layout/Sider';
@@ -102,33 +117,56 @@ import {
   getRuntimeComponentInstallationDescription,
   showInstallationIntegrityModal,
 } from './components/layout/InstallationIntegrityDialog';
+import { createRuntimeInstallationReconciler } from './services/runtime/runtimeInstallationReconciler';
 
-// Patch Korean locale with missing properties from English locale
-const koKRComplete = {
-  ...koKR,
-  Calendar: {
-    ...koKR.Calendar,
-    monthFormat: enUS.Calendar.monthFormat,
-    yearFormat: enUS.Calendar.yearFormat,
-  },
-  DatePicker: {
-    ...koKR.DatePicker,
-    Calendar: {
-      ...koKR.DatePicker.Calendar,
-      monthFormat: enUS.Calendar.monthFormat,
-      yearFormat: enUS.Calendar.yearFormat,
-    },
-  },
-  Form: enUS.Form,
-  ColorPicker: enUS.ColorPicker,
+// Arco ships several locales that predate its newer components: sections such
+// as Form, ColorPicker and the Calendar month/year formats are missing there.
+// Backfill anything absent from the English locale so every entry satisfies the
+// full locale shape (generalises the previous hand-written ko-KR patch).
+type ArcoLocaleInput = Omit<Partial<typeof enUS>, 'Calendar' | 'DatePicker'> & {
+  Calendar?: Partial<(typeof enUS)['Calendar']>;
+  DatePicker?: Omit<Partial<(typeof enUS)['DatePicker']>, 'Calendar'> & {
+    Calendar?: Partial<(typeof enUS)['DatePicker']['Calendar']>;
+  };
 };
 
+const completeArcoLocale = (locale: ArcoLocaleInput): typeof enUS => ({
+  ...enUS,
+  ...locale,
+  Calendar: {
+    ...enUS.Calendar,
+    ...locale.Calendar,
+    monthFormat: locale.Calendar?.monthFormat ?? enUS.Calendar.monthFormat,
+    yearFormat: locale.Calendar?.yearFormat ?? enUS.Calendar.yearFormat,
+  },
+  DatePicker: {
+    ...enUS.DatePicker,
+    ...locale.DatePicker,
+    Calendar: {
+      ...enUS.DatePicker.Calendar,
+      ...locale.DatePicker?.Calendar,
+      monthFormat: locale.DatePicker?.Calendar?.monthFormat ?? enUS.Calendar.monthFormat,
+      yearFormat: locale.DatePicker?.Calendar?.yearFormat ?? enUS.Calendar.yearFormat,
+    },
+  },
+  Form: locale.Form ?? enUS.Form,
+  ColorPicker: locale.ColorPicker ?? enUS.ColorPicker,
+});
+
+// Every language AionUi ships that Arco publishes a locale for. Arco has no
+// uk-UA or fa-IR locale; those fall back to English component strings.
 const arcoLocales: Record<string, typeof enUS> = {
   'zh-CN': zhCN,
   'zh-TW': zhTW,
   'ja-JP': jaJP,
-  'ko-KR': koKRComplete,
+  'ko-KR': completeArcoLocale(koKR),
   'en-US': enUS,
+  'tr-TR': completeArcoLocale(trTR),
+  'ru-RU': completeArcoLocale(ruRU),
+  'pt-BR': completeArcoLocale(ptBR),
+  'de-DE': completeArcoLocale(deDE),
+  'es-ES': completeArcoLocale(esES),
+  'fr-FR': completeArcoLocale(frFR),
 };
 
 const INSTALLATION_INTEGRITY_FAILURES = new Set<RuntimeFailureKind>([
@@ -194,64 +232,95 @@ function resolveRuntimeResourceLabel(event: IRuntimeStatusEvent, t: TFunction): 
 const RuntimeFailureDialogs: React.FC = () => {
   const { t } = useTranslation();
   const [modal, modalContextHolder] = Modal.useModal();
-  const shownFailuresRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    return ipcBridge.runtime.statusChanged.on((event: IRuntimeStatusEvent) => {
+    const reconciler = createRuntimeInstallationReconciler({
+      showDialog: (event) => {
+        const resource = resolveRuntimeResourceLabel(event, t);
+        const description = getRuntimeComponentInstallationDescription(t, resource);
+        const controller = showInstallationIntegrityModal(
+          modal,
+          t,
+          description,
+          buildRuntimeInstallationDiagnostics(event, description)
+        );
+        return { close: () => controller.close() };
+      },
+      report: (event) => captureRuntimeInstallationIntegrityFailure(event),
+    });
+
+    const offStatus = ipcBridge.runtime.statusChanged.on((event: IRuntimeStatusEvent) => {
+      // Reconcile install-integrity failures and node ready events (spec 8/13.4).
+      if (
+        (event.phase === 'failed' && isInstallationIntegrityFailure(event.failure_kind)) ||
+        (event.phase === 'ready' && event.resource === 'node')
+      ) {
+        reconciler.handleStatus(event);
+        return;
+      }
+
+      // Non-integrity failures keep the existing generic error modal (unchanged).
       if (event.phase !== 'failed') {
         return;
       }
-      const signature = [
-        event.resource,
-        event.resource_id ?? '',
-        event.scope.kind,
-        event.scope.id,
-        event.failure_kind ?? 'unknown',
-        event.message ?? '',
-      ].join('|');
-      if (shownFailuresRef.current.has(signature)) {
-        return;
-      }
-      shownFailuresRef.current.add(signature);
-
       const resource = resolveRuntimeResourceLabel(event, t);
-      const installationIntegrityFailure = isInstallationIntegrityFailure(event.failure_kind);
-      const description = installationIntegrityFailure
-        ? getRuntimeComponentInstallationDescription(t, resource)
-        : t('settings.runtimeStatus.failedUnknown', { resource });
-      if (installationIntegrityFailure) {
-        captureRuntimeInstallationIntegrityFailure(event);
-        showInstallationIntegrityModal(modal, t, description, buildRuntimeInstallationDiagnostics(event, description));
-        return;
-      }
-
       modal.error({
         title: t('common.error'),
-        content: <InstallationIntegrityContent description={description} />,
+        content: <InstallationIntegrityContent description={t('settings.runtimeStatus.failedUnknown', { resource })} />,
         okText: t('common.confirm'),
         closable: false,
         maskClosable: false,
       });
     });
+
+    const onBeforeUnload = () => reconciler.flushPending();
+    window.addEventListener('beforeunload', onBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload);
+      offStatus();
+      reconciler.flushPending();
+      reconciler.dispose();
+    };
   }, [modal, t]);
 
   return <>{modalContextHolder}</>;
 };
 
+// Global SWR default: do NOT revalidate every query on window focus. Focus
+// refetch (SWR's default) made the app re-hit /api/assistants, /api/skills,
+// /api/conversations, etc. on every window focus — often twice (same endpoint
+// under different SWR keys) — even though those are kept fresh by WebSocket
+// events (conversation.listChanged, team events, extensions.state-changed) or
+// in-app `mutate` after edits. Queries that genuinely need focus refresh (e.g.
+// Google auth/subscription status, which change in an external browser) opt back
+// in per-hook with `revalidateOnFocus: true`.
+const SWR_DEFAULTS = { revalidateOnFocus: false } as const;
+
 const AppProviders: React.FC<PropsWithChildren> = ({ children }) =>
   React.createElement(
-    AuthProvider,
-    null,
+    SWRConfig,
+    { value: SWR_DEFAULTS },
     React.createElement(
-      ThemeProvider,
+      AuthProvider,
       null,
       React.createElement(
-        PreviewProvider,
+        ThemeProvider,
         null,
         React.createElement(
-          FeedbackProvider,
+          PreviewProvider,
           null,
-          React.createElement(React.Fragment, null, React.createElement(RuntimeFailureDialogs, null), children)
+          React.createElement(
+            FeedbackProvider,
+            null,
+            React.createElement(
+              React.Fragment,
+              null,
+              React.createElement(RuntimeFailureDialogs, null),
+              React.createElement(GpuAutoDisableNotice, null),
+              children
+            )
+          )
         )
       )
     )
@@ -263,7 +332,11 @@ const Config: React.FC<PropsWithChildren> = ({ children }) => {
   } = useTranslation();
   const arcoLocale = arcoLocales[language] ?? enUS;
 
-  return React.createElement(ConfigProvider, { theme: { primaryColor: '#4E5969' }, locale: arcoLocale }, children);
+  return React.createElement(
+    ConfigProvider,
+    { theme: { primaryColor: '#4E5969' }, locale: arcoLocale, rtl: isRtlLanguage(language) },
+    children
+  );
 };
 
 const Main = () => {
@@ -303,10 +376,14 @@ const BackendStartupFailureDialog: React.FC<{ failure: BackendStartupFailureInfo
   const isIncompatibleRuntime = failure.reason === 'backend_incompatible_runtime';
   const isPackageArchitectureMismatch = failure.reason === 'backend_package_architecture_mismatch';
   const isDataMigrationFailure = failure.reason === 'backend_data_migration_failed';
+  const isDatabaseNewerThanApp = failure.reason === 'backend_database_newer_than_app';
   const isLocalDataRepairFailure = failure.reason === 'backend_local_data_repair_failed';
   const isRecoverableDatabaseCorruption = failure.reason === 'backend_recoverable_database_corruption';
   const isTransientConcurrentStartup = failure.reason === 'backend_transient_concurrent_startup';
   const isStartupDirectoryFailure = failure.reason === 'backend_startup_directory_unavailable';
+  const isBackendExited = failure.reason === 'backend_startup_exited';
+  const isPortReportTimeout = failure.reason === 'backend_startup_port_report_timeout';
+  const isIncompleteInstallation = failure.reason === 'backend_incomplete_installation';
   const title = t('common.backendStartup.incompatibleRuntime.title');
   const description = isIncompatibleRuntime
     ? t('common.backendStartup.incompatibleRuntime.description')
@@ -316,17 +393,29 @@ const BackendStartupFailureDialog: React.FC<{ failure: BackendStartupFailureInfo
           deviceArch: failure.deviceArch ?? 'arm64',
           expectedArch: failure.expectedDownloadArch ?? 'arm64',
         })
-      : isDataMigrationFailure
-        ? t('common.backendStartup.dataMigration.description')
-        : isLocalDataRepairFailure
-          ? t('common.backendStartup.localDataRepair.description')
-          : isTransientConcurrentStartup
-            ? t('common.backendStartup.transientConcurrentStartup.description')
-            : isStartupDirectoryFailure
-              ? t('common.backendStartup.startupDirectory.description')
-              : isRecoverableDatabaseCorruption
-                ? t('common.backendStartup.recoverableDatabaseCorruption.description')
-                : getBackendStartupInstallationDescription(t);
+      : isDatabaseNewerThanApp
+        ? failure.appVersion
+          ? t('common.backendStartup.databaseNewerThanApp.descriptionWithVersion', {
+              currentVersion: failure.appVersion,
+            })
+          : t('common.backendStartup.databaseNewerThanApp.description')
+        : isDataMigrationFailure
+          ? t('common.backendStartup.dataMigration.description')
+          : isLocalDataRepairFailure
+            ? t('common.backendStartup.localDataRepair.description')
+            : isTransientConcurrentStartup
+              ? t('common.backendStartup.transientConcurrentStartup.description')
+              : isStartupDirectoryFailure
+                ? t('common.backendStartup.startupDirectory.description')
+                : isRecoverableDatabaseCorruption
+                  ? t('common.backendStartup.recoverableDatabaseCorruption.description')
+                  : isBackendExited
+                    ? t('common.backendStartup.exited.description')
+                    : isPortReportTimeout
+                      ? t('common.backendStartup.portReportTimeout.description')
+                      : isIncompleteInstallation
+                        ? getBackendStartupInstallationDescription(t)
+                        : t('common.backendStartup.startupFailed.description');
   const requiredVersions = failure.requiredVersions?.map((version) => `GLIBC_${version}`).join(', ');
 
   if (!isIncompatibleRuntime && !isPackageArchitectureMismatch) {
@@ -343,9 +432,17 @@ const BackendStartupFailureDialog: React.FC<{ failure: BackendStartupFailureInfo
                   ? 'startup_directory'
                   : isLocalDataRepairFailure
                     ? 'local_data_repair'
-                    : isDataMigrationFailure
-                      ? 'data_migration'
-                      : 'incomplete_installation'
+                    : isDatabaseNewerThanApp
+                      ? 'database_newer_than_app'
+                      : isDataMigrationFailure
+                        ? 'data_migration'
+                        : isBackendExited
+                          ? 'backend_exited'
+                          : isPortReportTimeout
+                            ? 'port_report_timeout'
+                            : isIncompleteInstallation
+                              ? 'incomplete_installation'
+                              : 'startup_failed'
           }
           diagnostics={{
             source: 'backend_startup_failure',
@@ -392,26 +489,22 @@ const BackendStartupFailureDialog: React.FC<{ failure: BackendStartupFailureInfo
 void registerPwa();
 
 const root = createRoot(document.getElementById('root')!);
-const backendStartupFailure = window.__backendStartupFailure;
-const shouldShowBackendStartupFailureDialog =
-  backendStartupFailure?.reason === 'backend_incompatible_runtime' ||
-  backendStartupFailure?.reason === 'backend_incomplete_installation' ||
-  backendStartupFailure?.reason === 'backend_package_architecture_mismatch' ||
-  backendStartupFailure?.reason === 'backend_data_migration_failed' ||
-  backendStartupFailure?.reason === 'backend_local_data_repair_failed' ||
-  backendStartupFailure?.reason === 'backend_recoverable_database_corruption' ||
-  backendStartupFailure?.reason === 'backend_transient_concurrent_startup' ||
-  backendStartupFailure?.reason === 'backend_startup_failed';
-if (backendStartupFailure && shouldShowBackendStartupFailureDialog) {
-  root.render(
-    <Config>
-      <BackendStartupFailureDialog failure={backendStartupFailure} />
-    </Config>
-  );
-} else {
-  root.render(
-    <AppProviders>
-      <App />
-    </AppProviders>
-  );
-}
+root.render(
+  <BackendStartupGate
+    renderStarting={() => (
+      <Config>
+        <BackendStartingView />
+      </Config>
+    )}
+    renderFailure={(failure) => (
+      <Config>
+        <BackendStartupFailureDialog failure={failure} />
+      </Config>
+    )}
+    renderApp={() => (
+      <AppProviders>
+        <App />
+      </AppProviders>
+    )}
+  />
+);

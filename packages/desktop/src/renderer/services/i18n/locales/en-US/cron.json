@@ -5,6 +5,7 @@
   "nextRun": "Next run",
   "lastRun": "Last run",
   "lastError": "Error",
+  "lastErrorWithDetail": "Last error: {{error}}",
   "message": "Message",
   "goToConversation": "Go to conversation",
   "status": {
@@ -13,7 +14,7 @@
     "error": "Error",
     "unread": "New execution",
     "unconfigured": "No scheduled task",
-    "defaultPrompt": "Every day at 10am, search for the latest AI news, summarize and output an insight report."
+    "defaultPrompt": "Every day at 10am, search for the latest AI news, summarize and output an insight report. (Please use the /cron skill to create a scheduled task in AionUi.)"
   },
   "actions": {
     "goTo": "View Chat",

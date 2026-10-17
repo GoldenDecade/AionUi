@@ -15,7 +15,10 @@
     "renameOk": "Kaydet",
     "renameCancel": "İptal",
     "renameSuccess": "Takım yeniden adlandırıldı",
-    "deleteSuccess": "Takım silindi"
+    "deleteSuccess": "Takım silindi",
+    "archive": "Archive",
+    "archiveSuccess": "Team archived",
+    "archiveFailed": "Failed to archive team"
   },
   "newAgent": "Yeni Asistan",
   "noMessages": "No messages yet.",
@@ -27,7 +30,8 @@
     "runtimeStarting": "Bu üyenin başlaması bekleniyor…",
     "runtimeFailed": "Bu üye başlatılamadı.",
     "removing": "Bu üye kaldırılıyor…",
-    "sessionStopped": "Takım oturumu durdu."
+    "sessionStopped": "Takım oturumu durdu.",
+    "retryStart": "Başlatmayı yeniden dene"
   },
   "sendBox": {
     "placeholder": "Takım lideri asistana mesaj gönder..."
@@ -100,7 +104,8 @@
   "view": {
     "label": "View",
     "parallel": "Parallel",
-    "single": "Single"
+    "single": "Single",
+    "board": "Pano"
   },
   "warmup": {
     "title": "Waking up the team…",
@@ -115,5 +120,74 @@
     "leaderFailedHint": "Switch its model above, then retry.",
     "retry": "Retry"
   },
-  "reorderMember": "Üye sırasını değiştirmek için sürükleyin"
+  "reorderMember": "Üye sırasını değiştirmek için sürükleyin",
+  "interruptAndSend": "Kes ve gönder",
+  "interruptAgentFailed": "Aracı kesme başarısız oldu. Lütfen tekrar deneyin.",
+  "agentActions": {
+    "label": "Aracı işlemleri",
+    "reconnectDescription": "Aracı sürecini yeniden başlatır ve mevcut bağlamı korur.",
+    "disabled": {
+      "initializing": "Aracı başlatılıyor.",
+      "busy": "Mevcut yanıtın ve kuyruktaki işlerin tamamlanmasını bekleyin.",
+      "dormant": "Önce bu üyeyi uyandırın.",
+      "failed": "Önce bu üyeyi başlatmayı yeniden deneyin.",
+      "removing": "Bu üye kaldırılıyor.",
+      "sessionStopped": "Takım oturumu durduruldu.",
+      "unsupported": "Bu aracı yeni bağlam başlatmayı desteklemiyor.",
+      "leaderNotTargetable": "Takım lideri için yeni bağlam başlatılamaz."
+    },
+    "contextReset": {
+      "title": "Yeni bağlam başlat",
+      "description": "Yeni bir arka uç oturumu oluşturur. Sohbet geçmişi ve görevler korunur.",
+      "confirmTitle": "{{memberName}} için yeni bağlam başlatılsın mı?",
+      "confirmContent": "Mevcut aracı oturumu durdurulacak ve sonraki mesajla yeni bir arka uç oturumu oluşturulacak. Sohbet geçmişi, görevler, dosyalar, model ve üye ayarları korunur; ancak aracı önceki oturumun akıl yürütme bağlamını kaybeder.",
+      "confirm": "Yeni bağlam başlat",
+      "success": "{{memberName}} için yeni bağlam başlatıldı.",
+      "partialSuccess": "{{memberName}} bağlamı sıfırlandı ancak aracı yeniden başlatılamadı. “Başlatmayı yeniden dene”yi kullanın.",
+      "notApplied": "Yeni bağlam başlatılamadı. Mevcut bağlam korundu.",
+      "failed": "Yeni bağlam başlatılamadı. Lütfen tekrar deneyin."
+    }
+  },
+  "systemNotice": {
+    "sender": "Takım",
+    "contextResetSuccess": "{{memberName}} için yeni bağlam başlatıldı.",
+    "contextResetRuntimeFailed": "{{memberName}} bağlamı sıfırlandı ancak aracı yeniden başlatılamadı."
+  },
+  "activity": {
+    "control": {
+      "sortNewest": "En yeni",
+      "sortOldest": "En eski",
+      "filterAll": "Tümü",
+      "filterMessages": "Mesajlar",
+      "filterTasks": "Görevler",
+      "allMembers": "Tüm üyeler",
+      "showSystem": "Sistem mesajları",
+      "showTerminal": "Tamamlanan görevler"
+    },
+    "fallbackLane": "Atanmamış / harici",
+    "empty": "Henüz etkinlik yok",
+    "userIdentity": "Kullanıcı / harici",
+    "broadcast": "Herkese yayınla",
+    "read": "Okundu",
+    "unread": "Okunmadı",
+    "attachments": "{{count}} dosya",
+    "attachments_one": "{{count}} dosya",
+    "attachments_other": "{{count}} dosya",
+    "expand": "Genişlet",
+    "collapse": "Daralt",
+    "blockedBy": "#{{id}} tarafından engellendi",
+    "blockedByNamed": "{{name}} tarafından engellendi",
+    "blockerUnknown": "Görev kullanılamıyor",
+    "status": {
+      "pending": "Beklemede",
+      "in_progress": "Devam ediyor",
+      "completed": "Tamamlandı",
+      "deleted": "Silindi"
+    },
+    "msgType": {
+      "message": "Mesaj",
+      "idle_notification": "Boşta bildirimi",
+      "shutdown_request": "Kapatma isteği"
+    }
+  }
 }

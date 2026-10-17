@@ -1,4 +1,6 @@
 import { ipcBridge } from '@/common';
+import type { SessionRef } from '@/common/adapter/ipcBridge';
+import { type ChatFileRef, chatFileRefKey, isChatFileRef } from '@/common/types/chatFile';
 import { uuid } from '@/common/utils';
 import {
   getConversationRuntimeViewSnapshot,
@@ -14,7 +16,12 @@ import { classifyConversationBusyError } from './conversationBusyError';
 export type ConversationCommandQueueItem = {
   id: string;
   input: string;
-  files: string[];
+  files: ChatFileRef[];
+  /** `@@` session references. Must survive the draft box: a message that goes
+   *  through the queue and loses its references is a silent failure — the agent
+   *  simply never sees the session block. Ids only, so this adds a handful of
+   *  bytes to the persisted state. */
+  sessions?: SessionRef[];
   created_at: number;
 };
 
@@ -50,11 +57,25 @@ type QueueValidationFailure = {
 
 const COMMAND_QUEUE_LOG_PREFIX = '[conversation-command-queue]';
 
+/** Keep only well-formed `{ id }` refs from persisted state. Unknown shapes are
+ *  dropped rather than failing the whole item: losing a stale reference is
+ *  recoverable, losing the user's typed message is not. */
+const normalizeSessionRefs = (value: unknown): SessionRef[] | undefined => {
+  if (!Array.isArray(value)) return undefined;
+  const refs = value.filter(
+    (entry): entry is SessionRef =>
+      typeof (entry as SessionRef | undefined)?.id === 'string' && (entry as SessionRef).id.length > 0
+  );
+  return refs.length > 0 ? refs : undefined;
+};
+
 const summarizeQueuedCommand = (item: ConversationCommandQueueItem): Record<string, unknown> => ({
   id: item.id,
   created_at: item.created_at,
   inputLength: item.input.length,
   fileCount: item.files.length,
+  // Count only, matching `fileCount` — never the referenced ids or names.
+  sessionCount: item.sessions?.length ?? 0,
 });
 
 const logCommandQueue = (conversation_id: string, event: string, payload: Record<string, unknown> = {}): void => {
@@ -76,12 +97,12 @@ const logCommandQueue = (conversation_id: string, event: string, payload: Record
     .catch(() => {});
 };
 
-const normalizeQueueMode = (mode: unknown): ConversationCommandQueueMode => (mode === 'manual' ? 'manual' : 'auto');
+const normalizeQueueMode = (mode: unknown): ConversationCommandQueueMode => (mode === 'auto' ? 'auto' : 'manual');
 
 const createDefaultQueueState = (): ConversationCommandQueueState => ({
   items: [],
   isPaused: false,
-  mode: 'auto',
+  mode: 'manual',
 });
 
 const queueStore = new Map<string, ConversationCommandQueueState>();
@@ -90,7 +111,18 @@ const getStorageKey = (conversation_id: string): string => `conversation-command
 const measureQueueStateBytes = (state: ConversationCommandQueueState): number =>
   new TextEncoder().encode(JSON.stringify(state)).length;
 
-const uniqueFiles = (files: string[]): string[] => Array.from(new Set(files.filter(Boolean)));
+/** Dedup refs by their identity key, preserving first-seen order. */
+const uniqueFiles = (files: ChatFileRef[]): ChatFileRef[] => {
+  const seen = new Set<string>();
+  const result: ChatFileRef[] = [];
+  for (const ref of files) {
+    const key = chatFileRefKey(ref);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(ref);
+  }
+  return result;
+};
 const isInputEmpty = (input: string): boolean => input.trim().length === 0;
 
 const normalizeQueueItem = (item: unknown): ConversationCommandQueueItem | null => {
@@ -103,7 +135,7 @@ const normalizeQueueItem = (item: unknown): ConversationCommandQueueItem | null 
     typeof candidate.id !== 'string' ||
     typeof candidate.input !== 'string' ||
     !Array.isArray(candidate.files) ||
-    !candidate.files.every((file) => typeof file === 'string') ||
+    !candidate.files.every(isChatFileRef) ||
     typeof candidate.created_at !== 'number' ||
     !Number.isFinite(candidate.created_at)
   ) {
@@ -113,7 +145,12 @@ const normalizeQueueItem = (item: unknown): ConversationCommandQueueItem | null 
   const normalizedItem: ConversationCommandQueueItem = {
     id: candidate.id,
     input: candidate.input,
-    files: uniqueFiles(candidate.files),
+    // Elements validated by the isChatFileRef guard above; `.every` doesn't
+    // narrow the array element type, so assert it here.
+    files: uniqueFiles(candidate.files as ChatFileRef[]),
+    // Absent in state persisted before `@@` existed, so this must tolerate
+    // `undefined` rather than rejecting the whole item.
+    sessions: normalizeSessionRefs(candidate.sessions),
     created_at: candidate.created_at,
   };
 
@@ -168,10 +205,14 @@ export const estimateQueueStateBytes = (state: ConversationCommandQueueState): n
 export const createQueuedCommandItem = ({
   input,
   files,
-}: Pick<ConversationCommandQueueItem, 'input' | 'files'>): ConversationCommandQueueItem => ({
+  sessions,
+}: Pick<ConversationCommandQueueItem, 'input' | 'files' | 'sessions'>): ConversationCommandQueueItem => ({
   id: uuid(),
   input,
   files: uniqueFiles(files),
+  // Normalised on the way in as well as on the way out of persistence, so an
+  // empty array never survives as `[]` and the state stays comparable.
+  sessions: normalizeSessionRefs(sessions),
   created_at: Date.now(),
 });
 
@@ -262,7 +303,7 @@ const removePersistedQueueState = (conversation_id: string): void => {
 const persistQueueState = (conversation_id: string, state: ConversationCommandQueueState): void => {
   const normalized = normalizeQueueState(state);
 
-  if (normalized.items.length === 0 && !normalized.isPaused && normalized.mode === 'auto') {
+  if (normalized.items.length === 0 && !normalized.isPaused && normalized.mode === 'manual') {
     removePersistedQueueState(conversation_id);
     return;
   }
@@ -308,7 +349,7 @@ export const restoreQueuedCommand = (
 export const updateQueuedCommand = (
   items: ConversationCommandQueueItem[],
   commandId: string,
-  updates: Partial<Pick<ConversationCommandQueueItem, 'input' | 'files'>>
+  updates: Partial<Pick<ConversationCommandQueueItem, 'input' | 'files' | 'sessions'>>
 ): ConversationCommandQueueItem[] =>
   items.map((item) =>
     item.id === commandId
@@ -316,6 +357,7 @@ export const updateQueuedCommand = (
           ...item,
           ...updates,
           files: updates.files ? uniqueFiles(updates.files) : item.files,
+          sessions: updates.sessions ?? item.sessions,
         }
       : item
   );
@@ -375,7 +417,10 @@ type UseConversationCommandQueueOptions = {
   onExecute: (item: ConversationCommandQueueItem) => Promise<void>;
 };
 
-type EnqueueCommandInput = Pick<ConversationCommandQueueItem, 'input' | 'files'>;
+/// `sessions` is part of the enqueue input, not just of the stored item: a
+/// message that reaches the draft box and loses its `@@` references fails
+/// silently — the send succeeds and the agent simply never sees the block.
+type EnqueueCommandInput = Pick<ConversationCommandQueueItem, 'input' | 'files' | 'sessions'>;
 type UpdateCommandInput = Pick<ConversationCommandQueueItem, 'input'>;
 type BackgroundCommandQueueRunner = {
   conversation_id: string;
@@ -611,13 +656,28 @@ export const useConversationCommandQueue = ({
       return;
     }
 
+    if (waitingForTurnStartRef.current && executionGate.hydrated && executionGate.canExecute) {
+      waitingForTurnStartRef.current = false;
+      waitingForTurnCompletionRef.current = false;
+      observedBusyBlockedGateRef.current = false;
+      logCommandQueue(conversation_id, 'turn-finished-without-observed-start', {
+        pendingItemCount: stateRef.current.items.length,
+      });
+    }
+
     if (waitingForTurnCompletionRef.current && executionGate.hydrated && executionGate.canExecute) {
       waitingForTurnCompletionRef.current = false;
       logCommandQueue(conversation_id, 'turn-finished', {
         pendingItemCount: stateRef.current.items.length,
       });
     }
-  }, [conversation_id, executionGate.canExecute, executionGate.hydrated, executionGate.isProcessing]);
+  }, [
+    conversation_id,
+    data.items.length,
+    executionGate.canExecute,
+    executionGate.hydrated,
+    executionGate.isProcessing,
+  ]);
 
   useEffect(() => {
     pausedRef.current = data.isPaused;
@@ -708,13 +768,13 @@ export const useConversationCommandQueue = ({
   );
 
   const enqueue = useCallback(
-    ({ input, files }: EnqueueCommandInput) => {
+    ({ input, files, sessions }: EnqueueCommandInput) => {
       if (!enabled) {
         return null;
       }
 
       const currentState = normalizeQueueState(stateRef.current);
-      const item = createQueuedCommandItem({ input, files });
+      const item = createQueuedCommandItem({ input, files, sessions });
       const validation = validateQueuedCommandItem(item, currentState);
 
       if (isQueueValidationFailure(validation)) {
@@ -1106,7 +1166,7 @@ export const useConversationCommandQueue = ({
   return {
     items: enabled ? data.items : [],
     isPaused: enabled ? data.isPaused : false,
-    mode: enabled ? data.mode : 'auto',
+    mode: enabled ? data.mode : 'manual',
     isInteractionLocked,
     hasPendingCommands: enabled ? data.items.length > 0 : false,
     enqueue,

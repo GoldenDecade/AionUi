@@ -29,10 +29,27 @@ export type BackendStartupFailureReason =
   | 'backend_incomplete_installation'
   | 'backend_package_architecture_mismatch'
   | 'backend_data_migration_failed'
+  // The local database was created by a newer AionUi version (downgrade).
+  // The data is intact; the fix is updating AionUi, not reinstalling or
+  // inspecting migrations (Sentry ELECTRON-31Z).
+  | 'backend_database_newer_than_app'
   | 'backend_local_data_repair_failed'
   | 'backend_recoverable_database_corruption'
   | 'backend_transient_concurrent_startup'
   | 'backend_startup_directory_unavailable'
+  // Backend process spawned and was observed listening but /health did not pass
+  // within the timeout, while the process stayed alive (kept pending). Recoverable
+  // "slow startup" — must NOT be surfaced as an "incomplete installation".
+  | 'backend_startup_pending_slow'
+  // Backend process spawned and was observed listening but then exited before
+  // becoming ready (either within the health window or after the pending timeout).
+  // Honest startup failure — surfaced without reinstall/antivirus guidance.
+  | 'backend_startup_exited'
+  // Backend process spawned but never reported its listening port within the
+  // port-report window (stage `listen_timeout`). The process has been killed,
+  // so this is a fatal-but-honest "startup timed out" — never an "incomplete
+  // installation" (Sentry 136646113).
+  | 'backend_startup_port_report_timeout'
   | 'backend_startup_failed';
 
 export type BackendIncompleteInstallationKind = 'missing_backend_binary' | 'missing_directory_resources';
@@ -59,6 +76,10 @@ export interface BackendStartupFailureInfo {
   deviceArch?: string;
   expectedDownloadArch?: string;
   isRosettaTranslated?: boolean;
+  /** Currently installed AionUi version, stamped by the main process when a
+   * startup failure is recorded. Lets dialogs reference the user's version
+   * (e.g. the downgrade dialog: "data needs something newer than vX.Y.Z"). */
+  appVersion?: string;
 }
 
 declare global {
@@ -68,6 +89,10 @@ declare global {
     __aionuiE2ETest?: boolean;
     __backendStartupFailed?: boolean;
     __backendStartupFailure?: BackendStartupFailureInfo | null;
+    __backendStartupBridge?: {
+      getState: () => BackendStartupFailureInfo | null;
+      subscribe: (callback: (state: BackendStartupFailureInfo | null) => void) => () => void;
+    };
     __installationIntegrityReportCount?: number;
     __lastInstallationIntegrityReportMessage?: string;
   }

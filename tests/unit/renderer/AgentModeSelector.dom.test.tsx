@@ -69,6 +69,7 @@ vi.mock('@arco-design/web-react', () => {
     Message: {
       success: vi.fn(),
       error: vi.fn(),
+      info: vi.fn(),
     },
     Tooltip: ({ children, content }: { children?: React.ReactNode; content?: React.ReactNode }) => (
       <span data-tooltip-content={typeof content === 'string' ? content : undefined}>{children}</span>
@@ -140,6 +141,77 @@ describe('AgentModeSelector', () => {
 
     await waitFor(() => expect(screen.getByTestId('mode-selector')).toHaveAttribute('data-current-mode', 'default'));
     expect(screen.getByText('权限 · 默认')).toBeInTheDocument();
+  });
+
+  // A switch the backend accepted but has not applied yet (codex always, claude/agy
+  // mid-turn) must not move the pill onto the requested mode: the pill answers "what
+  // permission is governing right now", and showing the target would tell the user a
+  // tightening had landed when it had not. The target rides alongside instead, and the
+  // "权限 · " prefix is dropped to pay for the extra width (the shield icon already says
+  // it is the permission pill).
+  it('shows a pending target without moving the pill off the mode still in force', async () => {
+    useAcpConfigOptionsMock.mockImplementation(() => ({
+      setStatus: { state: 'idle' },
+      isLoading: false,
+      mode: runtimeMode(),
+      model: null,
+      thoughtLevel: null,
+      reload: vi.fn(),
+      setConfigOption: vi.fn(),
+      pendingValues: { mode: 'bypassPermissions' },
+    }));
+
+    render(
+      <AgentModeSelector
+        backend='claude'
+        conversation_id='conv-1'
+        compact
+        modeLabelFormatter={(mode) => (mode.value === 'default' ? '默认' : '全自动')}
+        compactLabelPrefix='权限'
+      />
+    );
+
+    await waitFor(() => expect(screen.getByText('默认 → 全自动')).toBeInTheDocument());
+    expect(screen.getByTestId('mode-selector')).toHaveAttribute('data-current-mode', 'default');
+  });
+
+  // Picking a mode the backend defers must NOT be reported as a failure, and must not
+  // move the pill: the old code threw `config_not_observed` for anything that did not
+  // read back as the requested value, which is exactly what a deferred switch looks like.
+  it('treats a deferred switch as pending rather than an error', async () => {
+    const { Message } = (await import('@arco-design/web-react')) as unknown as {
+      Message: { success: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn>; info: ReturnType<typeof vi.fn> };
+    };
+    // The backend answers with the mode still in force, not the one just requested.
+    const setConfigOption = vi.fn().mockResolvedValue([{ id: 'mode', current_value: 'default' }]);
+    useAcpConfigOptionsMock.mockImplementation(() => ({
+      setStatus: { state: 'idle' },
+      isLoading: false,
+      mode: runtimeMode(),
+      model: null,
+      thoughtLevel: null,
+      reload: vi.fn(),
+      setConfigOption,
+      pendingValues: {},
+    }));
+
+    render(
+      <AgentModeSelector
+        backend='claude'
+        conversation_id='conv-1'
+        compact
+        modeLabelFormatter={(mode) => (mode.value === 'default' ? '默认' : '全自动')}
+        compactLabelPrefix='权限'
+      />
+    );
+
+    fireEvent.click(screen.getByText('全自动'));
+
+    await waitFor(() => expect(setConfigOption).toHaveBeenCalledWith('mode', 'bypassPermissions'));
+    await waitFor(() => expect(Message.info).toHaveBeenCalled());
+    expect(Message.error).not.toHaveBeenCalled();
+    expect(Message.success).not.toHaveBeenCalled();
+    expect(screen.getByTestId('mode-selector')).toHaveAttribute('data-current-mode', 'default');
   });
 
   it('keeps compact mode selector hidden while runtime mode is initializing', () => {
@@ -225,6 +297,37 @@ describe('AgentModeSelector', () => {
     expect(useAcpConfigOptionsMock).toHaveBeenCalledWith(
       expect.objectContaining({ prepareSetRuntime: beforeRuntimeSet })
     );
+  });
+
+  it('falls back to the raw mode value when the current value matches no option', async () => {
+    // Regression: an out-of-catalog current value (e.g. backend mode-vocabulary
+    // drift such as codex "agent-full-access" vs catalog "full-access") used to
+    // render an empty label — the compact pill showed a bare "权限 · ".
+    useAcpConfigOptionsMock.mockImplementation(() => ({
+      setStatus: { state: 'idle' },
+      isLoading: false,
+      mode: {
+        id: 'mode',
+        category: 'mode',
+        currentValue: 'agent-full-access',
+        options: [
+          { value: 'read-only', label: 'Read Only', description: null },
+          { value: 'auto', label: 'Default', description: null },
+          { value: 'full-access', label: 'Full Access', description: null },
+        ],
+      },
+      model: null,
+      thoughtLevel: null,
+      reload: vi.fn(),
+      setConfigOption: vi.fn(),
+    }));
+
+    render(<AgentModeSelector backend='codex' conversation_id='conv-1' compact compactLabelPrefix='权限' />);
+
+    await waitFor(() =>
+      expect(screen.getByTestId('mode-selector')).toHaveAttribute('data-current-mode', 'agent-full-access')
+    );
+    expect(screen.getByTestId('agent-mode-selector-codex')).toHaveTextContent('权限 · agent-full-access');
   });
 
   it('shows runtime mode descriptions in option tooltips', () => {

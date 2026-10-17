@@ -1,11 +1,17 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ITeamSlotWork, TeamSlotBlockedReason } from '@/common/types/team/teamTypes';
 import {
+  buildTeamRetryStartHandler,
   buildTeamSendRuntime,
   buildTeamStopHandler,
   buildTeamWorkStatusText,
 } from '@/renderer/pages/team/components/teamSendRuntime';
 import type { TeamRunViewState } from '@/renderer/pages/team/hooks/useTeamRunView';
+import { ipcBridge } from '@/common';
+
+vi.mock('@/common', () => ({
+  ipcBridge: { team: { attachAgent: { invoke: vi.fn(() => Promise.resolve()) } } },
+}));
 
 const work = (overrides: Partial<ITeamSlotWork> = {}): ITeamSlotWork => ({
   slot_id: 'lead',
@@ -81,6 +87,18 @@ describe('buildTeamSendRuntime', () => {
     expect(runtime.loading).toBe(true);
     expect(runtime.onStop).toBe(onStop);
     expect(runtime.runtimeGate.canSendMessage).toBe(true);
+  });
+
+  it('does not show paused queued work as processing', () => {
+    const slotWork = work({
+      state: 'paused',
+      queued_foreground_count: 2,
+      queued_background_count: 3,
+    });
+    const runtime = buildTeamSendRuntime({ slot_id: 'lead', runView: view(slotWork) });
+
+    expect(runtime.loading).toBe(false);
+    expect(runtime.queuedCount).toBe(5);
   });
 
   it('allows sending while RuntimeStarting is blocked', () => {
@@ -191,6 +209,10 @@ describe('buildTeamWorkStatusText', () => {
   it('hides queued count while work has not started yet', () => {
     expect(text(work({ state: 'queued', queued_foreground_count: 2 }))).toBe('processing');
   });
+
+  it('does not label paused queued work as processing', () => {
+    expect(text(work({ state: 'paused', queued_background_count: 2 }))).toBeUndefined();
+  });
 });
 
 describe('buildTeamStopHandler', () => {
@@ -212,5 +234,33 @@ describe('buildTeamStopHandler', () => {
       slot_id: 'lead',
       reason: 'user_stop',
     });
+  });
+
+  it('converges locally before reconciling after a successful stop', async () => {
+    const pauseSlotWork = vi.fn(async () => {});
+    const onStopSucceeded = vi.fn();
+    const onRunStateStale = vi.fn(async () => 'applied' as const);
+    const handler = buildTeamStopHandler({
+      team_id: 'team-1',
+      slot_id: 'lead',
+      runView: view(work({ state: 'running', active_turn_id: 'turn-1' })),
+      pauseSlotWork,
+      onStopSucceeded,
+      onRunStateStale,
+    });
+
+    await handler();
+
+    expect(onStopSucceeded).toHaveBeenCalledOnce();
+    expect(onRunStateStale).toHaveBeenCalledOnce();
+  });
+});
+
+describe('buildTeamRetryStartHandler', () => {
+  it('invokes the directed per-member attach route (not warmupSession)', async () => {
+    const invoke = vi.mocked(ipcBridge.team.attachAgent.invoke);
+    invoke.mockClear();
+    await buildTeamRetryStartHandler({ team_id: 't1', slot_id: 's2' })();
+    expect(invoke).toHaveBeenCalledWith({ team_id: 't1', slot_id: 's2' });
   });
 });

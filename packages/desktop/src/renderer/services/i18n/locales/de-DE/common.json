@@ -23,6 +23,8 @@
   "loading": "Bitte warten...",
   "copy": "Kopieren",
   "reply": "Antworten",
+  "openInBuiltinBrowser": "Im integrierten Browser öffnen",
+  "openInSystemBrowser": "Im Systembrowser öffnen",
   "copySuccess": "Kopiert",
   "copyFailed": "Kopieren fehlgeschlagen",
   "download": "Herunterladen",
@@ -36,6 +38,8 @@
   "expandMore": "Mehr anzeigen",
   "collapse": "Einklappen",
   "viewMoreLines": "Mehr anzeigen ({{count}} Zeilen)",
+  "viewMoreLines_one": "Mehr anzeigen ({{count}} Zeile)",
+  "viewMoreLines_other": "Mehr anzeigen ({{count}} Zeilen)",
   "success": "Erfolgreich",
   "error": "Fehler",
   "saveSuccess": "Erfolgreich gespeichert",
@@ -99,6 +103,11 @@
       "diagnosticsReportSuccess": "Diagnostics report sent",
       "diagnosticsReportFailed": "Failed to send diagnostics report"
     },
+    "databaseNewerThanApp": {
+      "title": "Neuere AionUi-Version erforderlich",
+      "description": "Ihre lokalen Daten wurden von einer neueren AionUi-Version erstellt und können von dieser Version nicht geöffnet werden. Aktualisieren Sie AionUi auf die neueste Version — Ihre Daten bleiben erhalten, eine Neuinstallation oder ein Zurücksetzen ist nicht nötig.",
+      "descriptionWithVersion": "Ihre lokalen Daten wurden von einer AionUi-Version erstellt, die neuer ist als die aktuell installierte (v{{currentVersion}}), daher kann diese Version sie nicht öffnen. Aktualisieren Sie AionUi auf die neueste Version — Ihre Daten bleiben erhalten, eine Neuinstallation oder ein Zurücksetzen ist nicht nötig."
+    },
     "localDataRepair": {
       "title": "Local data repair failed",
       "description": "AionUi wurde geöffnet, aber AionCore wurde beim Vorbereiten lokaler Startdaten wie Assistant- oder Agent-Datensätzen beendet. Eine Neuinstallation von AionUi behebt dies möglicherweise nicht. Senden Sie einen Diagnosebericht oder wenden Sie sich an den Support, damit die lokale Datenbank geprüft werden kann.",
@@ -117,14 +126,20 @@
     },
     "recoverableDatabaseCorruption": {
       "title": "Lokale Daten sind beschädigt",
-      "description": "AionUi hat erkannt, dass die lokale Datenbank beschädigt ist und den Start nicht fortsetzen kann. Nach der Bestätigung wird die alte Datenbank gesichert und eine neue lokale Datenbank erstellt, um den Start fortzusetzen. Frühere lokale Daten werden vorerst nicht angezeigt, und die alte Datenbank bleibt als Sicherung erhalten.",
+      "description": "AionUi hat erkannt, dass die lokale Datenbank beschädigt ist und den Start nicht fortsetzen kann. Nach der Bestätigung wird die alte Datenbank gesichert und eine neue lokale Datenbank erstellt, um den Start fortzusetzen. Frühere Unterhaltungen werden nicht mehr angezeigt, und die alte Datenbank bleibt als Sicherungsdatei erhalten.",
       "confirmRebuild": "Alte DB sichern und neue DB erstellen",
       "sendDiagnostics": "Diagnose senden",
       "diagnosticsHint": "Das Senden der Diagnose ändert die lokale Datenbank nicht.",
       "diagnosticsSent": "Diagnose gesendet",
       "diagnosticsReportSuccess": "Diagnosebericht gesendet",
       "diagnosticsReportFailed": "Diagnosebericht konnte nicht gesendet werden",
-      "rebuildFailed": "Alte DB konnte nicht gesichert und neue DB nicht erstellt werden"
+      "rebuildFailed": "Alte DB konnte nicht gesichert und neue DB nicht erstellt werden",
+      "confirmDialog": {
+        "title": "Datenbank neu aufbauen?",
+        "content": "Dieser Vorgang sichert die aktuell beschädigte Datenbank und erstellt eine völlig neue leere Datenbank. Frühere Unterhaltungen werden nicht mehr angezeigt (die alte Datenbank bleibt als Sicherungsdatei erhalten). Fortfahren?",
+        "okText": "Neuaufbau bestätigen",
+        "cancelText": "Abbrechen"
+      }
     },
     "transientConcurrentStartup": {
       "title": "AionUi wird gestartet",
@@ -134,6 +149,34 @@
       "diagnosticsReportSuccess": "Diagnostics report sent",
       "diagnosticsReportFailed": "Failed to send diagnostics report",
       "diagnosticsHint": "Wenn dies wiederholt auftritt, können Sie einen Diagnosebericht senden."
+    },
+    "pendingSlow": {
+      "title": "Wird gestartet",
+      "description": "AionCore wird gestartet, bitte warten. Wenn es nach einer Weile nicht reagiert, können Sie die App beenden und erneut öffnen."
+    },
+    "exited": {
+      "title": "Start nicht abgeschlossen",
+      "description": "AionCore konnte den Start nicht abschließen und wurde beendet. Bitte starten Sie die App neu; wenn dies wiederholt auftritt, senden Sie bitte eine Diagnose.",
+      "sendDiagnostics": "Diagnose senden",
+      "diagnosticsSent": "Diagnose gesendet",
+      "diagnosticsReportSuccess": "Diagnose gemeldet",
+      "diagnosticsReportFailed": "Diagnose konnte nicht gesendet werden, bitte erneut versuchen"
+    },
+    "portReportTimeout": {
+      "title": "Zeitüberschreitung beim Start",
+      "description": "AionCore konnte den Start nicht innerhalb der erwarteten Zeit abschließen. Bitte starten Sie die App neu; wenn dies wiederholt auftritt, senden Sie bitte eine Diagnose.",
+      "sendDiagnostics": "Diagnose senden",
+      "diagnosticsSent": "Diagnose gesendet",
+      "diagnosticsReportSuccess": "Diagnose gemeldet",
+      "diagnosticsReportFailed": "Diagnose konnte nicht gesendet werden, bitte erneut versuchen"
+    },
+    "startupFailed": {
+      "title": "Start fehlgeschlagen",
+      "description": "AionCore konnte nicht gestartet werden. Bitte starten Sie die App neu; wenn dies wiederholt auftritt, senden Sie bitte eine Diagnose.",
+      "sendDiagnostics": "Diagnose senden",
+      "diagnosticsSent": "Diagnose gesendet",
+      "diagnosticsReportSuccess": "Diagnose gemeldet",
+      "diagnosticsReportFailed": "Diagnose konnte nicht gesendet werden, bitte erneut versuchen"
     }
   },
   "fileAttach.addFiles": "Dateien hinzufügen",
@@ -158,5 +201,6 @@
   },
   "goBack": "Zurück",
   "selectedCount": "{{count}} ausgewählt",
-  "selectedSkills": "Ausgewählte Skills"
+  "selectedSkills": "Ausgewählte Skills",
+  "aiAssistant": "KI-Assistent"
 }

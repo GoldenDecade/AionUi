@@ -15,7 +15,10 @@
     "renameOk": "Сохранить",
     "renameCancel": "Отмена",
     "renameSuccess": "Команда переименована",
-    "deleteSuccess": "Команда удалена"
+    "deleteSuccess": "Команда удалена",
+    "archive": "Archive",
+    "archiveSuccess": "Team archived",
+    "archiveFailed": "Failed to archive team"
   },
   "newAgent": "Новый ассистент",
   "noMessages": "Пока нет сообщений.",
@@ -27,7 +30,8 @@
     "runtimeStarting": "Ожидание запуска участника…",
     "runtimeFailed": "Не удалось запустить участника.",
     "removing": "Удаление участника…",
-    "sessionStopped": "Сеанс команды остановлен."
+    "sessionStopped": "Сеанс команды остановлен.",
+    "retryStart": "Повторить запуск"
   },
   "sendBox": {
     "placeholder": "Сообщение ассистенту-лидеру команды..."
@@ -100,7 +104,8 @@
   "view": {
     "label": "View",
     "parallel": "Parallel",
-    "single": "Single"
+    "single": "Single",
+    "board": "Доска"
   },
   "warmup": {
     "title": "Waking up the team…",
@@ -115,5 +120,76 @@
     "leaderFailedHint": "Switch its model above, then retry.",
     "retry": "Retry"
   },
-  "reorderMember": "Перетащите, чтобы изменить порядок участников"
+  "reorderMember": "Перетащите, чтобы изменить порядок участников",
+  "interruptAndSend": "Прервать и отправить",
+  "interruptAgentFailed": "Не удалось прервать агента. Повторите попытку.",
+  "agentActions": {
+    "label": "Действия агента",
+    "reconnectDescription": "Перезапускает процесс агента и сохраняет текущий контекст.",
+    "disabled": {
+      "initializing": "Агент инициализируется.",
+      "busy": "Дождитесь завершения текущего ответа и заданий в очереди.",
+      "dormant": "Сначала активируйте этого участника.",
+      "failed": "Сначала повторите запуск этого участника.",
+      "removing": "Этот участник удаляется.",
+      "sessionStopped": "Сеанс команды остановлен.",
+      "unsupported": "Этот агент не поддерживает новый контекст.",
+      "leaderNotTargetable": "Нельзя начать новый контекст для руководителя команды."
+    },
+    "contextReset": {
+      "title": "Начать новый контекст",
+      "description": "Создаёт новый сеанс бэкенда. История чата и задачи сохраняются.",
+      "confirmTitle": "Начать новый контекст для {{memberName}}?",
+      "confirmContent": "Текущий сеанс агента будет остановлен, а со следующим сообщением будет создан новый сеанс бэкенда. История чата, задачи, файлы, модель и настройки участника сохранятся, но агент потеряет контекст рассуждений предыдущего сеанса.",
+      "confirm": "Начать новый контекст",
+      "success": "Для {{memberName}} начат новый контекст.",
+      "partialSuccess": "Контекст {{memberName}} сброшен, но агент не запустился повторно. Используйте «Повторить запуск».",
+      "notApplied": "Не удалось начать новый контекст. Текущий контекст сохранён.",
+      "failed": "Не удалось начать новый контекст. Повторите попытку."
+    }
+  },
+  "systemNotice": {
+    "sender": "Команда",
+    "contextResetSuccess": "Для {{memberName}} начат новый контекст.",
+    "contextResetRuntimeFailed": "Контекст {{memberName}} сброшен, но агент не запустился повторно."
+  },
+  "activity": {
+    "control": {
+      "sortNewest": "Сначала новые",
+      "sortOldest": "Сначала старые",
+      "filterAll": "Все",
+      "filterMessages": "Сообщения",
+      "filterTasks": "Задачи",
+      "allMembers": "Все участники",
+      "showSystem": "Системные сообщения",
+      "showTerminal": "Завершённые задачи"
+    },
+    "fallbackLane": "Без назначения / внешние",
+    "empty": "Пока нет активности",
+    "userIdentity": "Пользователь / внешний",
+    "broadcast": "Отправить всем",
+    "read": "Прочитано",
+    "unread": "Не прочитано",
+    "attachments": "Вложений: {{count}}",
+    "attachments_one": "Вложений: {{count}}",
+    "attachments_other": "Вложений: {{count}}",
+    "attachments_few": "Вложений: {{count}}",
+    "attachments_many": "Вложений: {{count}}",
+    "expand": "Развернуть",
+    "collapse": "Свернуть",
+    "blockedBy": "заблокировано #{{id}}",
+    "blockedByNamed": "заблокировано «{{name}}»",
+    "blockerUnknown": "Задача недоступна",
+    "status": {
+      "pending": "Ожидает",
+      "in_progress": "В работе",
+      "completed": "Завершено",
+      "deleted": "Удалено"
+    },
+    "msgType": {
+      "message": "Сообщение",
+      "idle_notification": "Уведомление о простое",
+      "shutdown_request": "Запрос на остановку"
+    }
+  }
 }

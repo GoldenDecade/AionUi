@@ -31,13 +31,22 @@ vi.mock('@/renderer/pages/conversation/platforms/legacy/LegacyReadOnlyConversati
   default: () => <div data-testid='mock-legacy-conversation' />,
 }));
 
+const switchTabMock = vi.fn();
+const teamTabsState = { activeSlotId: 'slot-a', switchTab: switchTabMock };
+vi.mock('@/renderer/pages/team/hooks/TeamTabsContext', () => ({
+  useTeamTabs: () => teamTabsState,
+}));
+
 import TeamChatView from '@/renderer/pages/team/components/TeamChatView';
+import { ipcBridge } from '@/common';
 
 describe('TeamChatView', () => {
   beforeEach(() => {
     usePresetAssistantInfoMock.mockReset();
     acpChatMock.mockClear();
     aionrsChatMock.mockClear();
+    switchTabMock.mockClear();
+    teamTabsState.activeSlotId = 'slot-a';
   });
 
   it('prefers preset assistant backend over legacy conversation extra backend', async () => {
@@ -109,6 +118,28 @@ describe('TeamChatView', () => {
         agent_name: 'Planner Assistant',
       })
     );
+  });
+
+  it('does not inject a Team orchestration clear command into the agent slash catalog', async () => {
+    usePresetAssistantInfoMock.mockReturnValue({ info: null });
+
+    render(
+      <TeamChatView
+        team_id='team-1'
+        slot_id='worker-1'
+        conversation={{
+          id: 'conv-1',
+          type: 'acp',
+          name: 'Team member',
+          created_at: Date.now(),
+          updated_at: Date.now(),
+          extra: { workspace: '/tmp' },
+        }}
+      />
+    );
+
+    expect(await screen.findByTestId('mock-acp-chat')).toBeInTheDocument();
+    expect(acpChatMock.mock.calls[0]?.[0]).not.toHaveProperty('extraSlashCommands');
   });
 
   it('passes loaded skills and MCP snapshot to ACP team chat', async () => {
@@ -321,5 +352,128 @@ describe('TeamChatView', () => {
         }),
       })
     );
+  });
+
+  it('exposes interrupt-and-send only while a teammate has an active turn', async () => {
+    usePresetAssistantInfoMock.mockReturnValue({ info: null });
+    const interruptSpy = vi.spyOn(ipcBridge.team.interruptAgent, 'invoke').mockResolvedValue({
+      outcome: 'interrupted',
+      interrupted_turn_id: 'turn-1',
+      message_id: 'message-1',
+      target: {
+        slot_id: 'worker-1',
+        role: 'teammate',
+        state: 'queued',
+        queued_foreground_count: 1,
+        queued_background_count: 0,
+        active_turn_id: null,
+        active_turn_started_at_ms: null,
+        active_turn_elapsed_ms: null,
+        active_turn_slow: null,
+        active_turn_slow_threshold_ms: null,
+        blocked_reason: null,
+        team_run_id: 'run-1',
+      },
+    });
+    render(
+      <TeamChatView
+        team_id='team-1'
+        slot_id='worker-1'
+        conversation={{
+          id: 'conv-1',
+          type: 'acp',
+          name: 'Team member',
+          created_at: Date.now(),
+          updated_at: Date.now(),
+          extra: { workspace: '/tmp' },
+        }}
+        teamRunView={{
+          activeRun: undefined,
+          childTurnsBySlot: {},
+          slotWorkBySlot: {
+            'worker-1': {
+              slot_id: 'worker-1',
+              role: 'teammate',
+              state: 'running',
+              queued_foreground_count: 0,
+              queued_background_count: 0,
+              active_turn_id: 'turn-1',
+              active_turn_started_at_ms: Date.now(),
+              active_turn_elapsed_ms: 1,
+              active_turn_slow: false,
+              active_turn_slow_threshold_ms: 60_000,
+              blocked_reason: null,
+              team_run_id: 'run-1',
+            },
+          },
+          sessionStopped: false,
+        }}
+      />
+    );
+
+    expect(await screen.findByTestId('mock-acp-chat')).toBeInTheDocument();
+    expect(acpChatMock.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        teamRuntime: expect.objectContaining({ onInterruptSend: expect.any(Function) }),
+      })
+    );
+    const props = acpChatMock.mock.calls[0]?.[0] as {
+      teamRuntime: { onInterruptSend: (payload: { input: string; files: [] }) => Promise<void> };
+    };
+    await props.teamRuntime.onInterruptSend({ input: 'Use the correction', files: [] });
+    expect(interruptSpy).toHaveBeenCalledWith({
+      team_id: 'team-1',
+      slot_id: 'worker-1',
+      input: 'Use the correction',
+      files: [],
+      reason: 'leader_intervention',
+      queued_policy: 'retain',
+    });
+  });
+
+  it('marks teamRuntime.isActive true when slot matches activeSlotId and wires onFocus to switchTab', async () => {
+    usePresetAssistantInfoMock.mockReturnValue({ info: { name: 'A', logo: '📋', isEmoji: true, backend: 'claude' } });
+    teamTabsState.activeSlotId = 'slot-a';
+    render(
+      <TeamChatView
+        team_id='team-1'
+        slot_id='slot-a'
+        conversation={{
+          id: 'conv-a',
+          type: 'acp',
+          name: 'Team - A',
+          created_at: Date.now(),
+          updated_at: Date.now(),
+          extra: { workspace: '/tmp' },
+        }}
+      />
+    );
+    await screen.findByTestId('mock-acp-chat');
+    const props = acpChatMock.mock.calls[0]?.[0] as { teamRuntime?: { isActive?: boolean; onFocus?: () => void } };
+    expect(props.teamRuntime?.isActive).toBe(true);
+    props.teamRuntime?.onFocus?.();
+    expect(switchTabMock).toHaveBeenCalledWith('slot-a');
+  });
+
+  it('marks teamRuntime.isActive false when slot does not match activeSlotId', async () => {
+    usePresetAssistantInfoMock.mockReturnValue({ info: { name: 'B', logo: '📋', isEmoji: true, backend: 'claude' } });
+    teamTabsState.activeSlotId = 'slot-a';
+    render(
+      <TeamChatView
+        team_id='team-1'
+        slot_id='slot-b'
+        conversation={{
+          id: 'conv-b',
+          type: 'acp',
+          name: 'Team - B',
+          created_at: Date.now(),
+          updated_at: Date.now(),
+          extra: { workspace: '/tmp' },
+        }}
+      />
+    );
+    await screen.findByTestId('mock-acp-chat');
+    const props = acpChatMock.mock.calls[0]?.[0] as { teamRuntime?: { isActive?: boolean } };
+    expect(props.teamRuntime?.isActive).toBe(false);
   });
 });
