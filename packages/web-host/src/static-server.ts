@@ -7,6 +7,12 @@
  * /api/auth/*. /ws and /api/stt/stream are WebSocket/stream upgrades spliced at
  * TCP level; /api/stt/stream is the STT streaming endpoint.
  *
+ * Access gate: aioncore runs with `--local` (auth disabled) because the desktop
+ * renderer talks to it directly without credentials. Only WebUI browser clients
+ * come through this server, so it enforces login itself: desktop-only management
+ * routes are denied, and every other /api/* call or upgrade must carry a session
+ * that aioncore's /api/auth/user accepts.
+ *
  * Design: Node native http + serve-handler. No Express. No business routes.
  */
 
@@ -74,6 +80,121 @@ export function pickLanIP(nets: ReturnType<typeof networkInterfaces>): string | 
 
 function getLanIP(): string | null {
   return pickLanIP(networkInterfaces());
+}
+
+export type AccessPolicy = 'public' | 'session' | 'deny';
+
+// Reachable without a session: the login flow and the session probe itself.
+const PUBLIC_PATHS = new Set(['/login', '/logout', '/api/auth/status', '/api/auth/user', '/api/auth/refresh']);
+// Desktop-only routes (password reset, QR tokens, internal user admin) and the
+// QR login exchange. aioncore answers them unauthenticated in `--local` mode,
+// so WebUI clients must never reach them.
+const DENY_PREFIXES = ['/api/webui', '/api/auth/internal', '/api/auth/qr-login'];
+
+const UNAUTHORIZED_BODY = JSON.stringify({ success: false, error: 'Authentication required', code: 'UNAUTHORIZED' });
+const FORBIDDEN_BODY = JSON.stringify({ success: false, error: 'Forbidden.', code: 'FORBIDDEN' });
+const RATE_LIMITED_BODY = JSON.stringify({ success: false, error: 'Rate limited', code: 'RATE_LIMITED' });
+
+/**
+ * Classify a request URL for the WebUI access gate. The path is decoded and
+ * slash-collapsed first so encoded or doubled segments cannot dodge the deny list.
+ */
+export function classifyRequest(url: string): AccessPolicy {
+  let path = url.split('?')[0];
+  try {
+    path = decodeURIComponent(path);
+  } catch {
+    return 'deny';
+  }
+  path = path.replace(/\/{2,}/g, '/').toLowerCase();
+  if (DENY_PREFIXES.some((prefix) => path.startsWith(prefix))) return 'deny';
+  if (PUBLIC_PATHS.has(path)) return 'public';
+  if (path === '/api' || path.startsWith('/api/') || path === '/ws') return 'session';
+  return 'public';
+}
+
+/** Ask aioncore's /api/auth/user about a credential; resolves to its HTTP status (401 on transport failure). */
+function probeSession(forwarded: http.OutgoingHttpHeaders, backendPort: number): Promise<number> {
+  return new Promise((resolve) => {
+    const probe = http.request(
+      {
+        hostname: '127.0.0.1',
+        port: backendPort,
+        path: '/api/auth/user',
+        method: 'GET',
+        headers: forwarded,
+        timeout: 5000,
+      },
+      (res) => {
+        res.resume();
+        resolve(res.statusCode ?? 401);
+      }
+    );
+    probe.on('timeout', () => probe.destroy());
+    probe.on('error', () => resolve(401));
+    probe.end();
+  });
+}
+
+// aioncore rate-limits /api/auth/user, so a page load's burst of parallel calls
+// must not each probe it: requests with the same credential share one in-flight
+// probe, and a confirmed session is trusted for a short window.
+const SESSION_CACHE_TTL_MS = 10_000;
+const SESSION_CACHE_MAX = 500;
+
+type SessionChecker = (headers: http.IncomingHttpHeaders) => Promise<number>;
+
+function createSessionChecker(backendPort: number): SessionChecker {
+  const cache = new Map<string, { status: Promise<number>; expiresAt: number }>();
+  return (headers) => {
+    const forwarded: http.OutgoingHttpHeaders = {};
+    if (headers.cookie) forwarded.cookie = headers.cookie;
+    if (headers.authorization) forwarded.authorization = headers.authorization;
+    if (!forwarded.cookie && !forwarded.authorization) return Promise.resolve(401);
+
+    const key = `${headers.cookie ?? ''}\n${headers.authorization ?? ''}`;
+    const now = Date.now();
+    const hit = cache.get(key);
+    if (hit && hit.expiresAt > now) return hit.status;
+
+    if (cache.size >= SESSION_CACHE_MAX) {
+      for (const [k, v] of cache) if (v.expiresAt <= now) cache.delete(k);
+    }
+    const entry = { status: probeSession(forwarded, backendPort), expiresAt: now + SESSION_CACHE_TTL_MS };
+    cache.set(key, entry);
+    // Only a confirmed session stays cached; a failure must re-probe so a fresh
+    // login or a retry after rate limiting takes effect immediately.
+    void entry.status.then((status) => {
+      if (status !== 200 && cache.get(key) === entry) cache.delete(key);
+    });
+    return entry.status;
+  };
+}
+
+/** Map a failed session probe to the gate's response: keep 429 so clients back off instead of re-logging in. */
+function rejectionFor(status: number): { status: number; body: string } {
+  return status === 429 ? { status: 429, body: RATE_LIMITED_BODY } : { status: 401, body: UNAUTHORIZED_BODY };
+}
+
+/** Parse the header block of a peeked raw HTTP request (keys lower-cased). */
+function parseRawHeaders(buf: Buffer): http.IncomingHttpHeaders {
+  const end = buf.indexOf('\r\n\r\n');
+  const lines = buf
+    .slice(0, end < 0 ? buf.length : end)
+    .toString('latin1')
+    .split('\r\n')
+    .slice(1);
+  const headers: Record<string, string> = {};
+  for (const line of lines) {
+    const idx = line.indexOf(':');
+    if (idx > 0) headers[line.slice(0, idx).trim().toLowerCase()] = line.slice(idx + 1).trim();
+  }
+  return headers;
+}
+
+function writeJson(res: ServerResponse, status: number, body: string): void {
+  res.writeHead(status, { 'content-type': 'application/json' });
+  res.end(body);
 }
 
 function forwardToBackend(req: IncomingMessage, res: ServerResponse, backendPort: number): void {
@@ -163,6 +284,7 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
   const port = opts.port ?? DEFAULT_PORT;
   const allowRemote = opts.allowRemote === true;
   const host = allowRemote ? '0.0.0.0' : '127.0.0.1';
+  const checkSession = createSessionChecker(opts.backendPort);
 
   // The HTTP server listens only on loopback — user traffic hits the outer
   // net.Server first. We route to this server for everything except WS
@@ -178,6 +300,20 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
       if (!req.url || !req.method) {
         res.writeHead(400).end();
         return;
+      }
+
+      const policy = classifyRequest(req.url);
+      if (policy === 'deny') {
+        writeJson(res, 403, FORBIDDEN_BODY);
+        return;
+      }
+      if (policy === 'session') {
+        const sessionStatus = await checkSession(req.headers);
+        if (sessionStatus !== 200) {
+          const rejection = rejectionFor(sessionStatus);
+          writeJson(res, rejection.status, rejection.body);
+          return;
+        }
       }
 
       // /api/* — reverse proxy to backend (includes /api/auth/*).
@@ -234,9 +370,30 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
       peeked = Buffer.concat([peeked, chunk]);
       const decision = peekWsRoute(peeked);
       if (decision === null && peeked.length < PEEK_LIMIT_BYTES) return;
+      // Upgrades skip the internal HTTP server, so wait for the full header
+      // block and check the session here before splicing to the backend.
+      if (decision === true && peeked.indexOf('\r\n\r\n') < 0 && peeked.length < PEEK_LIMIT_BYTES) return;
       cleanup();
-      const target = decision === true ? opts.backendPort : internalPort;
-      spliceToTcpEndpoint(client, target, peeked);
+      if (decision !== true) {
+        spliceToTcpEndpoint(client, internalPort, peeked);
+        return;
+      }
+      client.pause();
+      client.on('error', () => client.destroy());
+      void checkSession(parseRawHeaders(peeked)).then((sessionStatus) => {
+        if (sessionStatus === 200) {
+          spliceToTcpEndpoint(client, opts.backendPort, peeked);
+          return;
+        }
+        const rejection = rejectionFor(sessionStatus);
+        client.end(
+          `HTTP/1.1 ${rejection.status} ${http.STATUS_CODES[rejection.status]}\r\n` +
+            'Content-Type: application/json\r\n' +
+            `Content-Length: ${Buffer.byteLength(rejection.body)}\r\n` +
+            'Connection: close\r\n\r\n' +
+            rejection.body
+        );
+      });
     };
     const onEarlyError = (): void => {
       cleanup();
