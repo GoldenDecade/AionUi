@@ -461,6 +461,45 @@ describe('TeamPage teammate warmup wiring', () => {
     expect(modalConfirmMock).not.toHaveBeenCalled();
   });
 
+  it('updates tab status to active and shows spinner when member slotWork transitions to running', async () => {
+    ensureSessionMock.mockResolvedValue(undefined);
+
+    render(
+      <MemoryRouter>
+        <TeamPage team={team()} />
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByTestId('team-tab-spinner-member-slot')).not.toBeInTheDocument();
+
+    act(() => {
+      for (const handler of teamEventHandlers.slotWorkChanged ?? []) {
+        handler({
+          team_id: 'team-1',
+          slot_work: {
+            slot_id: 'member-slot',
+            role: 'teammate',
+            state: 'running',
+            queued_foreground_count: 0,
+            queued_background_count: 0,
+            active_turn_id: 'turn-1',
+            active_turn_started_at_ms: Date.now(),
+            active_turn_elapsed_ms: 100,
+            active_turn_slow: false,
+            active_turn_slow_threshold_ms: 600000,
+            blocked_reason: null,
+            team_run_id: 'run-1',
+          },
+        });
+      }
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('team-tab-spinner-member-slot')).toBeInTheDocument();
+      expect(screen.getByTestId('team-tab-status-member-slot')).toHaveAttribute('aria-label', 'active');
+    });
+  });
+
   it('uses the same teammate action menu on mobile', async () => {
     layoutState.isMobile = true;
     ensureSessionMock.mockResolvedValue(undefined);

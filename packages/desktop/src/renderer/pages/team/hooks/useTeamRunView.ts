@@ -90,17 +90,21 @@ const mergeSlotWork = (
 });
 
 const hasOrphanedProcessingWork = (state: TeamRunViewState): boolean => {
-  if (state.activeRun || state.sessionStopped) return false;
-  return Object.values(state.slotWorkBySlot).some(
-    (work) =>
-      work &&
-      work.state !== 'paused' &&
-      (work.state === 'queued' ||
-        work.state === 'starting' ||
-        work.state === 'running' ||
-        work.queued_foreground_count > 0 ||
-        work.queued_background_count > 0)
-  );
+  if (state.sessionStopped) return false;
+  return Object.values(state.slotWorkBySlot).some((work) => {
+    if (!work || work.state === 'paused') return false;
+    const isBusy =
+      work.state === 'queued' ||
+      work.state === 'starting' ||
+      work.state === 'running' ||
+      (work.queued_foreground_count ?? 0) > 0 ||
+      (work.queued_background_count ?? 0) > 0;
+    if (!isBusy) return false;
+    // When no active run exists, any busy slot is orphaned.
+    if (!state.activeRun) return true;
+    // When an active run exists, a busy slot bound to an older/different run is also orphaned.
+    return Boolean(work.team_run_id && work.team_run_id !== state.activeRun.team_run_id);
+  });
 };
 
 export const useTeamRunView = (team_id: string) => {
@@ -127,8 +131,12 @@ export const useTeamRunView = (team_id: string) => {
           return 'failed';
         }
 
-        if (seq !== reconcileSeq.current || requestedAtLiveEventVersion !== liveEventVersion.current) {
-          return attempt === 0 ? requestSnapshot(1) : 'superseded';
+        if (seq !== reconcileSeq.current) {
+          return 'superseded';
+        }
+
+        if (requestedAtLiveEventVersion !== liveEventVersion.current && attempt === 0) {
+          return requestSnapshot(1);
         }
 
         const activeRun = snapshot.active_run ?? undefined;

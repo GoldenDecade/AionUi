@@ -31,11 +31,12 @@ import TeamActivityView from './activity/TeamActivityView';
 import TeamWarmupOverlay from './components/TeamWarmupOverlay';
 import { useTeamViewMode } from './hooks/useTeamViewMode';
 import { useTeamWarmup, type TeamWarmupMemberState, type TeamWarmupPhase } from './hooks/useTeamWarmup';
-import { TeamTabsProvider, useTeamTabs } from './hooks/TeamTabsContext';
+import { TeamTabsProvider, useTeamTabs, type AgentStatusInfo } from './hooks/TeamTabsContext';
 import { TeamIdentityProvider } from './identity/TeamIdentityContext';
 import { TeamPermissionProvider, useTeamPermission } from './hooks/TeamPermissionContext';
 import { useTeamSession } from './hooks/useTeamSession';
 import { useTeamRunView, type TeamRunViewState } from './hooks/useTeamRunView';
+import { resolveSlotWorkStatus } from '@/common/adapter/teamMapper';
 import { getConversationOrNull } from '@/renderer/pages/conversation/utils/conversationCache';
 import { useActiveLease } from '@/renderer/pages/conversation/hooks/useActiveLease';
 import { resolveTeamWorkspaceView } from './utils/teamWorkspaceView';
@@ -59,6 +60,7 @@ function isAcpLikeBackend(backend: string | undefined): boolean {
 
 type TeamPageContentProps = {
   team: TTeam;
+  teamRun: ReturnType<typeof useTeamRunView>;
   onRenameTeam: (new_name: string) => Promise<boolean>;
   warmupPhase: TeamWarmupPhase;
   warmupRuntimeStatus: Map<string, TeamWarmupMemberState>;
@@ -532,6 +534,7 @@ const AssistantChatSlot: React.FC<{
 /** Inner component that reads active tab from context and renders the chat layout */
 const TeamPageContent: React.FC<TeamPageContentProps> = ({
   team,
+  teamRun,
   onRenameTeam,
   warmupPhase,
   warmupRuntimeStatus,
@@ -552,7 +555,6 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
 
   const activeAssistant = assistants.find((assistant) => assistant.slot_id === activeSlotId);
   const leadAssistant = assistants.find((assistant) => assistant.role === 'leader');
-  const teamRun = useTeamRunView(team.id);
 
   // 进团队 warmup：以团队会话整体就绪为闸门（ensureSession resolve = 全员成功）。遮罩覆盖对话区。
   // runtimeStatus 是各成员逐个的真实唤醒信号，用于遮罩头像的「唤醒中→点亮」及失败态定位。
@@ -961,9 +963,26 @@ const TeamPage: React.FC<Props> = ({ team }) => {
   const { phase: warmupPhase, runtimeStatus: warmupRuntimeStatus, retry: retryWarmup } = useTeamWarmup(team.id);
   const { statusMap, membershipMutationBusy, addAssistant, renameAssistant, removeAssistant, mutateTeam } =
     useTeamSession(team, warmupPhase);
+  const teamRun = useTeamRunView(team.id);
   const { user } = useAuth();
   const { mutate: globalMutate } = useSWRConfig();
   const defaultSlotId = team.assistants[0]?.slot_id ?? '';
+
+  const effectiveStatusMap = useMemo(() => {
+    const nextMap = new Map<string, AgentStatusInfo>();
+    for (const assistant of team.assistants) {
+      const baseInfo = statusMap.get(assistant.slot_id);
+      const slotWork = teamRun.state.slotWorkBySlot[assistant.slot_id];
+      const baseStatus = baseInfo?.status ?? assistant.status;
+      const effectiveStatus = resolveSlotWorkStatus(slotWork, baseStatus);
+      nextMap.set(assistant.slot_id, {
+        slot_id: assistant.slot_id,
+        status: effectiveStatus,
+        last_message: baseInfo?.last_message,
+      });
+    }
+    return nextMap;
+  }, [team.assistants, statusMap, teamRun.state.slotWorkBySlot]);
 
   const handleRemoveAssistantWithConfirm = useCallback(
     (slot_id: string) => {
@@ -978,7 +997,7 @@ const TeamPage: React.FC<Props> = ({ team }) => {
         }
       };
       // 移除成员一律二次确认；成员正在工作中时用更强的措辞提示会打断其工作。
-      const status = statusMap.get(slot_id)?.status;
+      const status = effectiveStatusMap.get(slot_id)?.status;
       const isActive = status === 'active';
       Modal.confirm({
         title: t('team.removeAgent.confirmTitle', { defaultValue: 'Remove team member' }),
@@ -991,7 +1010,7 @@ const TeamPage: React.FC<Props> = ({ team }) => {
         onOk: doRemoveAssistant,
       });
     },
-    [membershipMutationBusy, statusMap, removeAssistant, t]
+    [membershipMutationBusy, effectiveStatusMap, removeAssistant, t]
   );
 
   const handleRenameTeam = useCallback(
@@ -1012,7 +1031,7 @@ const TeamPage: React.FC<Props> = ({ team }) => {
   return (
     <TeamTabsProvider
       assistants={team.assistants}
-      statusMap={statusMap}
+      statusMap={effectiveStatusMap}
       defaultActiveSlotId={defaultSlotId}
       team_id={team.id}
       addAssistant={addAssistant}
@@ -1022,6 +1041,7 @@ const TeamPage: React.FC<Props> = ({ team }) => {
     >
       <TeamPageContent
         team={team}
+        teamRun={teamRun}
         onRenameTeam={handleRenameTeam}
         warmupPhase={warmupPhase}
         warmupRuntimeStatus={warmupRuntimeStatus}

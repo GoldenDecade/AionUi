@@ -4,12 +4,25 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TeamAssistant } from '@/common/types/team/teamTypes';
 
 vi.mock('@/renderer/pages/team/components/AgentStatusBadge', () => ({
-  default: ({ testId }: { testId: string }) => <span data-testid={testId} />,
+  default: ({ testId, status }: { testId: string; status: string }) => (
+    <span data-testid={testId} aria-label={status} />
+  ),
 }));
 
 vi.mock('@/renderer/pages/team/components/TeamAgentIdentity', () => ({
-  default: ({ assistant_name, nameTestId }: { assistant_name: string; nameTestId?: string }) => (
-    <span data-testid={nameTestId}>{assistant_name}</span>
+  default: ({
+    assistant_name,
+    nameTestId,
+    avatarOverlay,
+  }: {
+    assistant_name: string;
+    nameTestId?: string;
+    avatarOverlay?: React.ReactNode;
+  }) => (
+    <>
+      {avatarOverlay}
+      <span data-testid={nameTestId}>{assistant_name}</span>
+    </>
   ),
 }));
 
@@ -101,5 +114,27 @@ describe('TeamTabs', () => {
 
     expect(screen.getByTestId('team-tab-lead-slot')).toHaveAttribute('data-active', 'true');
     expect(screen.getByTestId('team-tab-worker-slot')).toHaveAttribute('data-active', 'false');
+  });
+
+  it('renders a spinner and active status badge when a member is actively working', () => {
+    const activeStatusMap = new Map([['worker-slot', { slot_id: 'worker-slot', status: 'active' as const }]]);
+
+    render(
+      <TeamTabsProvider
+        assistants={assistants}
+        statusMap={activeStatusMap}
+        defaultActiveSlotId='lead-slot'
+        team_id='team-1'
+      >
+        <TeamTabs warmingUp={false} />
+      </TeamTabsProvider>
+    );
+
+    const badge = screen.getByTestId('team-tab-status-worker-slot');
+    expect(badge).toHaveAttribute('aria-label', 'active');
+    expect(screen.getByTestId('team-tab-spinner-worker-slot')).toBeInTheDocument();
+
+    // Leader is idle, so no spinner on leader
+    expect(screen.queryByTestId('team-tab-spinner-lead-slot')).not.toBeInTheDocument();
   });
 });

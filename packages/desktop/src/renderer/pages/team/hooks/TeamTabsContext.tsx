@@ -8,7 +8,7 @@ import {
 } from '@renderer/components/layout/Sider/siderOrder';
 import { useTeamMemberColors } from '../identity/useTeamMemberColors';
 
-type AgentStatusInfo = {
+export type AgentStatusInfo = {
   slot_id: string;
   status: TeammateStatus;
   last_message?: string;

@@ -1,6 +1,7 @@
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { Spin } from '@arco-design/web-react';
 import { CloseSmall, Drag, Edit, Plus } from '@icon-park/react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -193,6 +194,14 @@ const TeamTabView: React.FC<TeamTabViewProps> = ({
               )
             }
           />
+          {status === 'active' && (
+            <span
+              data-testid={`team-tab-spinner-${slot_id}`}
+              className='shrink-0 flex items-center justify-center text-[color:var(--brand)]'
+            >
+              <Spin size={12} />
+            </span>
+          )}
         </div>
       )}
       {/* hover 时胶囊变宽、露出操作按钮；失焦则收起（胶囊变窄，只剩头像+文字）。拖拽期间冻结，避免布局跳动。 */}

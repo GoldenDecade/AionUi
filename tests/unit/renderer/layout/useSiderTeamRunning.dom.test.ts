@@ -1,10 +1,17 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ITeamRunEvent, ITeamRunStateResponse, TeamRunStatus, TTeam } from '@/common/types/team/teamTypes';
+import type {
+  ITeamRunEvent,
+  ITeamRunStateResponse,
+  ITeamSlotWorkChangedEvent,
+  TeamRunStatus,
+  TTeam,
+} from '@/common/types/team/teamTypes';
 import { useSiderTeamRunning } from '@/renderer/components/layout/Sider/useSiderTeamRunning';
 
 type TeamRunHandler = (event: ITeamRunEvent) => void;
 type ReconnectedHandler = (event: { timestamp: number }) => void;
+type SlotWorkHandler = (event: ITeamSlotWorkChangedEvent) => void;
 
 const bridgeMocks = vi.hoisted(() => {
   const handlers: Record<string, unknown> = {};
@@ -28,6 +35,7 @@ const bridgeMocks = vi.hoisted(() => {
       runCompleted: makeOn('runCompleted'),
       runCancelled: makeOn('runCancelled'),
       runFailed: makeOn('runFailed'),
+      slotWorkChanged: makeOn('slotWorkChanged'),
       reconnected: makeOn('reconnected'),
     },
   };
@@ -43,6 +51,7 @@ vi.mock('@/common', () => ({
       runCompleted: { on: bridgeMocks.on.runCompleted },
       runCancelled: { on: bridgeMocks.on.runCancelled },
       runFailed: { on: bridgeMocks.on.runFailed },
+      slotWorkChanged: { on: bridgeMocks.on.slotWorkChanged },
     },
     realtime: { reconnected: { on: bridgeMocks.on.reconnected } },
   },
@@ -81,6 +90,12 @@ const runEvent = (overrides: Partial<ITeamRunEvent> = {}): ITeamRunEvent => ({
   slot_work: [],
   ...overrides,
 });
+
+const emitSlotWork = (event: ITeamSlotWorkChangedEvent) => {
+  act(() => {
+    (bridgeMocks.handlers.slotWorkChanged as SlotWorkHandler)(event);
+  });
+};
 
 const emitRun = (channel: keyof typeof bridgeMocks.on, event: ITeamRunEvent) => {
   act(() => {
@@ -397,12 +412,84 @@ describe('useSiderTeamRunning', () => {
 
   it('unsubscribes from every lifecycle source on unmount', async () => {
     const { unmount } = renderHook(() => useSiderTeamRunning([team('team-1')]));
-    await waitFor(() => expect(Object.keys(bridgeMocks.unsubscribes)).toHaveLength(7));
+    await waitFor(() => expect(Object.keys(bridgeMocks.unsubscribes)).toHaveLength(8));
 
     unmount();
 
     expect(Object.values(bridgeMocks.unsubscribes).every((unsubscribe) => unsubscribe.mock.calls.length === 1)).toBe(
       true
     );
+  });
+  it('shows a team as running when a slot work event transitions to running (run-less work)', async () => {
+    const { result } = renderHook(() => useSiderTeamRunning([team('team-1')]));
+    await flushInitialReconcile();
+
+    expect(result.current('team-1')).toBe(false);
+
+    emitSlotWork({
+      team_id: 'team-1',
+      slot_work: {
+        slot_id: 'slot-worker',
+        role: 'teammate',
+        state: 'running',
+        queued_foreground_count: 0,
+        queued_background_count: 0,
+        active_turn_id: 'turn-1',
+        active_turn_started_at_ms: 1000,
+        active_turn_elapsed_ms: 50,
+        active_turn_slow: false,
+        active_turn_slow_threshold_ms: 600000,
+        blocked_reason: null,
+        team_run_id: null,
+      },
+    });
+
+    expect(result.current('team-1')).toBe(true);
+
+    emitSlotWork({
+      team_id: 'team-1',
+      slot_work: {
+        slot_id: 'slot-worker',
+        role: 'teammate',
+        state: 'idle',
+        queued_foreground_count: 0,
+        queued_background_count: 0,
+        active_turn_id: null,
+        active_turn_started_at_ms: null,
+        active_turn_elapsed_ms: null,
+        active_turn_slow: null,
+        active_turn_slow_threshold_ms: null,
+        blocked_reason: null,
+        team_run_id: null,
+      },
+    });
+
+    expect(result.current('team-1')).toBe(false);
+  });
+
+  it('hydrates a team as running when snapshot has active slot work but no active run', async () => {
+    bridgeMocks.getRunState.mockResolvedValueOnce({
+      ...emptyRunState(),
+      active_run: null,
+      slot_work: [
+        {
+          slot_id: 'slot-worker',
+          role: 'teammate',
+          state: 'running',
+          queued_foreground_count: 0,
+          queued_background_count: 0,
+          active_turn_id: 'turn-1',
+          active_turn_started_at_ms: 1000,
+          active_turn_elapsed_ms: 50,
+          active_turn_slow: false,
+          active_turn_slow_threshold_ms: 600000,
+          blocked_reason: null,
+          team_run_id: null,
+        },
+      ],
+    });
+
+    const { result } = renderHook(() => useSiderTeamRunning([team('team-1')]));
+    await waitFor(() => expect(result.current('team-1')).toBe(true));
   });
 });

@@ -6,6 +6,7 @@
 
 import type {
   BackendTeammateStatus,
+  ITeamSlotWork,
   TeamAssistant,
   TeamContextResetAvailability,
   TeamContextResetCapability,
@@ -56,6 +57,47 @@ const VALID_CONTEXT_RESET_AVAILABILITY = new Set<TeamContextResetAvailability>([
 function toRole(raw: string | undefined): TeammateRole {
   if (raw === 'lead') return 'leader';
   return VALID_ROLES.has(raw as TeammateRole) ? (raw as TeammateRole) : 'teammate';
+}
+
+/**
+ * Resolves a slot's effective user-facing teammate status by merging its
+ * authoritative runtime work state (slot_work) with its base session status.
+ *
+ * When a slot has active work ('running', 'starting', 'queued'), it is
+ * reported as 'active' so visual indicators (pulse, status badge, spinner)
+ * immediately reflect that this teammate is actively engaged in a task.
+ */
+export function resolveSlotWorkStatus(
+  slotWork?: ITeamSlotWork | null,
+  fallbackStatus?: TeammateStatus
+): TeammateStatus {
+  if (!slotWork) {
+    return fallbackStatus ?? 'idle';
+  }
+
+  switch (slotWork.state) {
+    case 'running':
+    case 'starting':
+    case 'queued':
+      return 'active';
+    case 'blocked':
+      if (slotWork.blocked_reason === 'runtime_failed') {
+        return 'failed';
+      }
+      if (slotWork.blocked_reason === 'runtime_starting') {
+        return 'pending';
+      }
+      return fallbackStatus ?? 'idle';
+    case 'paused':
+      return fallbackStatus ?? 'idle';
+    case 'idle':
+      if (fallbackStatus === 'dormant' || fallbackStatus === 'failed') {
+        return fallbackStatus;
+      }
+      return 'idle';
+    default:
+      return fallbackStatus ?? 'idle';
+  }
 }
 
 export function normalizeTeamStatus(raw: BackendTeammateStatus | undefined): TeammateStatus {

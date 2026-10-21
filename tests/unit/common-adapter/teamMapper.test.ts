@@ -9,6 +9,7 @@ import {
   fromBackendAssistant,
   fromBackendTeam,
   normalizeTeamStatus,
+  resolveSlotWorkStatus,
   toBackendAssistant,
 } from '@/common/adapter/teamMapper';
 
@@ -17,6 +18,76 @@ const contextResetReady = {
 } as const;
 
 describe('teamMapper', () => {
+  describe('resolveSlotWorkStatus', () => {
+    it('falls back to fallbackStatus when slotWork is undefined or null', () => {
+      expect(resolveSlotWorkStatus(undefined, 'dormant')).toBe('dormant');
+      expect(resolveSlotWorkStatus(null, 'failed')).toBe('failed');
+      expect(resolveSlotWorkStatus(undefined, undefined)).toBe('idle');
+    });
+
+    it('maps active work states (running, starting, queued) to active', () => {
+      const baseWork = {
+        slot_id: 'slot-1',
+        role: 'teammate' as const,
+        queued_foreground_count: 0,
+        queued_background_count: 0,
+        active_turn_id: null,
+        active_turn_started_at_ms: null,
+        active_turn_elapsed_ms: null,
+        active_turn_slow: null,
+        active_turn_slow_threshold_ms: null,
+        blocked_reason: null,
+        team_run_id: null,
+      };
+
+      expect(resolveSlotWorkStatus({ ...baseWork, state: 'running' }, 'idle')).toBe('active');
+      expect(resolveSlotWorkStatus({ ...baseWork, state: 'starting' }, 'idle')).toBe('active');
+      expect(resolveSlotWorkStatus({ ...baseWork, state: 'queued' }, 'idle')).toBe('active');
+    });
+
+    it('maps blocked states according to blocked_reason', () => {
+      const baseWork = {
+        slot_id: 'slot-1',
+        role: 'teammate' as const,
+        state: 'blocked' as const,
+        queued_foreground_count: 0,
+        queued_background_count: 0,
+        active_turn_id: null,
+        active_turn_started_at_ms: null,
+        active_turn_elapsed_ms: null,
+        active_turn_slow: null,
+        active_turn_slow_threshold_ms: null,
+        team_run_id: null,
+      };
+
+      expect(resolveSlotWorkStatus({ ...baseWork, blocked_reason: 'runtime_failed' }, 'idle')).toBe('failed');
+      expect(resolveSlotWorkStatus({ ...baseWork, blocked_reason: 'runtime_starting' }, 'idle')).toBe('pending');
+      expect(resolveSlotWorkStatus({ ...baseWork, blocked_reason: 'session_stopped' }, 'dormant')).toBe('dormant');
+    });
+
+    it('preserves special non-active states like dormant and failed when idle', () => {
+      const baseWork = {
+        slot_id: 'slot-1',
+        role: 'teammate' as const,
+        state: 'idle' as const,
+        queued_foreground_count: 0,
+        queued_background_count: 0,
+        active_turn_id: null,
+        active_turn_started_at_ms: null,
+        active_turn_elapsed_ms: null,
+        active_turn_slow: null,
+        active_turn_slow_threshold_ms: null,
+        blocked_reason: null,
+        team_run_id: null,
+      };
+
+      expect(resolveSlotWorkStatus(baseWork, 'dormant')).toBe('dormant');
+      expect(resolveSlotWorkStatus(baseWork, 'failed')).toBe('failed');
+      expect(resolveSlotWorkStatus(baseWork, 'idle')).toBe('idle');
+      expect(resolveSlotWorkStatus(baseWork, 'active')).toBe('idle');
+    });
+  });
+
   describe('normalizeTeamStatus', () => {
     it.each([
       ['pending', 'pending'],
