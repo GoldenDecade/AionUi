@@ -782,5 +782,18 @@
     "progress": "{{completed}}/{{total}}",
     "expand": "展开计划",
     "collapse": "收起计划"
+  },
+  "connectors": {
+    "qqMailReady": "QQ邮箱已就绪",
+    "qqMailPaused": "QQ邮箱已暂停",
+    "qqMailCalling": "正在调用 QQ 邮箱服务...",
+    "qqMailSuccess": "调用成功",
+    "qqMailFailed": "调用失败",
+    "sessionEnable": "本会话启用",
+    "sessionEnableTip": "开启后，Agent 可在当前对话中调用 QQ 邮箱工具收发与检索邮件",
+    "manageConnectors": "管理外部连接器",
+    "inputParams": "请求参数",
+    "resultOutput": "返回结果",
+    "errorTip": "QQ 邮箱服务调用异常，请检查网络或授权码配置"
   }
 }

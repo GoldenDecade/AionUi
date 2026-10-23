@@ -782,5 +782,18 @@
     "progress": "{{completed}}/{{total}}",
     "expand": "展開計劃",
     "collapse": "收合計劃"
+  },
+  "connectors": {
+    "qqMailReady": "QQ郵箱已就緒",
+    "qqMailPaused": "QQ郵箱已暫停",
+    "qqMailCalling": "正在調用 QQ 郵箱服務...",
+    "qqMailSuccess": "調用成功",
+    "qqMailFailed": "調用失敗",
+    "sessionEnable": "本會話啟用",
+    "sessionEnableTip": "開啟後，Agent 可在當前對話中調用 QQ 郵箱工具收發與檢索郵件",
+    "manageConnectors": "管理外部連接器",
+    "inputParams": "請求參數",
+    "resultOutput": "返回結果",
+    "errorTip": "QQ 郵箱服務調用異常，請檢查網絡或授權碼配置"
   }
 }

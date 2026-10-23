@@ -15,6 +15,7 @@ import { IconDown, IconRight } from '@arco-design/web-react/icon';
 import { createTwoFilesPatch } from 'diff';
 import React, { useMemo, useState } from 'react';
 import type { BadgeProps } from '@arco-design/web-react';
+import QQMailToolCallCard, { isQQMailTool } from './QQMailToolCallCard';
 import './MessageToolGroupSummary.css';
 
 const statusToBadge = (status: NormalizedToolStatus): BadgeProps['status'] => {
@@ -63,6 +64,19 @@ const MessageToolCall: React.FC<{ message: IMessageToolCall }> = ({ message }) =
   }
 
   const normalized = normalizeToolCall(message);
+
+  if (isQQMailTool(name) || (normalized && isQQMailTool(normalized.name))) {
+    return (
+      <QQMailToolCallCard
+        name={normalized?.name || name}
+        status={normalized?.status || 'completed'}
+        input={normalized?.input}
+        output={normalized?.output}
+        description={normalized?.description}
+      />
+    );
+  }
+
   if (!normalized) {
     return <div className='text-t-primary'>{name}</div>;
   }

@@ -784,5 +784,18 @@
     "progress": "{{completed}}/{{total}}",
     "expand": "Planı genişlet",
     "collapse": "Planı daralt"
+  },
+  "connectors": {
+    "qqMailReady": "QQ Mail Ready",
+    "qqMailPaused": "QQ Mail Paused",
+    "qqMailCalling": "Calling QQ Mail service...",
+    "qqMailSuccess": "Call Succeeded",
+    "qqMailFailed": "Call Failed",
+    "sessionEnable": "Enable for this session",
+    "sessionEnableTip": "When enabled, agents can access QQ Mail tools to search and manage emails",
+    "manageConnectors": "Manage Connectors",
+    "inputParams": "Parameters",
+    "resultOutput": "Output",
+    "errorTip": "QQ Mail service error, please check authorization code or network"
   }
 }
