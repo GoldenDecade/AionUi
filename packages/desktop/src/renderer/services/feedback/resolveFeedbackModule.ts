@@ -25,6 +25,7 @@ const ROUTE_MODULE_MAP: ReadonlyArray<readonly [prefix: string, tag: FeedbackMod
   ['/settings/model', 'model-auth'],
   ['/settings/skills', 'skills-plugin'],
   ['/settings/tools', 'mcp-tools'],
+  ['/settings/connectors', 'mcp-tools'],
   ['/settings/appearance', 'display-desktop'],
   ['/settings/pet', 'display-desktop'],
   ['/settings/webui', 'webui-remote'],

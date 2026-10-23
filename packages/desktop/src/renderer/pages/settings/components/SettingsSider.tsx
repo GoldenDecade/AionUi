@@ -5,6 +5,7 @@ import { useExtI18n } from '@/renderer/hooks/system/useExtI18n';
 import { useExtensionSettingsTabs } from '@/renderer/hooks/system/useExtensionSettingsTabs';
 import {
   Cat,
+  Connection,
   Communication,
   Computer,
   Earth,
@@ -30,6 +31,7 @@ export const BUILTIN_TAB_IDS = [
   'model',
   'skills',
   'tools',
+  'connectors',
   'appearance',
   'webui',
   'pet',
@@ -97,6 +99,12 @@ const SettingsSider: React.FC<{ collapsed?: boolean; tooltipEnabled?: boolean }>
         label: t('settings.skills', { defaultValue: 'Skills' }),
         icon: <Lightning />,
         path: 'skills',
+      },
+      connectors: {
+        id: 'connectors',
+        label: t('settings.connectors', { defaultValue: 'Connectors' }),
+        icon: <Connection />,
+        path: 'connectors',
       },
       tools: {
         id: 'tools',

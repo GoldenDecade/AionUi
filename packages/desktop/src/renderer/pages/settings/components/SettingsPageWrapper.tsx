@@ -10,6 +10,7 @@ import { type IExtensionSettingsTab } from '@/common/adapter/ipcBridge';
 import { useExtensionSettingsTabs } from '@/renderer/hooks/system/useExtensionSettingsTabs';
 import {
   Cat,
+  Connection,
   Communication,
   Computer,
   Earth,
@@ -58,6 +59,12 @@ export function getBuiltinSettingsNavItems(isDesktop: boolean, t: TranslateFn): 
       label: t('settings.skills', { defaultValue: 'Skills' }),
       icon: <Lightning theme='outline' size='16' />,
       path: 'skills',
+    },
+    connectors: {
+      id: 'connectors',
+      label: t('settings.connectors', { defaultValue: 'Connectors' }),
+      icon: <Connection theme='outline' size='16' />,
+      path: 'connectors',
     },
     tools: {
       id: 'tools',
