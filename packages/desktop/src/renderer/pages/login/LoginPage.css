@@ -395,3 +395,32 @@ body.login-page-active {
     display: none;
   }
 }
+
+.login-page__jdcloud-section {
+  width: 100%;
+}
+
+.login-page__submit--jdcloud {
+  background: linear-gradient(135deg, #165dff 0%, #0e42d2 100%);
+  margin-bottom: 0;
+}
+
+.login-page__divider {
+  display: flex;
+  align-items: center;
+  margin: 16px 0;
+  color: var(--color-text-3, #86909c);
+  font-size: 12px;
+}
+
+.login-page__divider::before,
+.login-page__divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background-color: var(--color-border, #e5e6eb);
+}
+
+.login-page__divider span {
+  padding: 0 12px;
+}

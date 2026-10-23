@@ -22,5 +22,9 @@
     "networkError": "连接失败，请稍后重试",
     "serverError": "服务器开小差了，请稍后重试",
     "unknown": "登录失败，请稍后再试"
-  }
+  },
+  "jdcloudLogin": "京东云统一账号登录",
+  "jdcloudLoggingIn": "正在跳转系统浏览器...",
+  "jdcloudLoginHint": "已打开系统浏览器，请完成授权",
+  "orDivider": "或者"
 }

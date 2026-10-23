@@ -22,5 +22,9 @@
     "networkError": "Connection failed, please try again",
     "serverError": "Server error, please try again later",
     "unknown": "Sign-in failed, please try again"
-  }
+  },
+  "jdcloudLogin": "Sign in with JDCloud",
+  "jdcloudLoggingIn": "Opening system browser...",
+  "jdcloudLoginHint": "Browser opened, please complete authorization",
+  "orDivider": "or"
 }

@@ -249,6 +249,19 @@ export const sessionMention = {
 // Auth — identity of the current client
 // ---------------------------------------------------------------------------
 
+export interface JDCloudUserProfile {
+  pin: string;
+  role?: string;
+  enterpriseId?: string;
+  seatId?: string;
+  points?: number;
+}
+
+export interface JDCloudAuthStatus {
+  authenticated: boolean;
+  user?: JDCloudUserProfile;
+}
+
 export const auth = {
   /**
    * Which user id the backend attributes THIS client's requests to.
@@ -263,7 +276,15 @@ export const auth = {
    * Desktop needs this at all because `AuthContext` keeps `user` null there.
    */
   currentUser: httpGet<{ id: string; username: string }>('/api/system/current-user'),
+
+  // JDCloud Desktop SSO (Electron-native IPC)
+  openLogin: bridge.buildProvider<{ success: boolean; state: string }, void>('auth:open-login'),
+  checkStatus: bridge.buildProvider<JDCloudAuthStatus, void>('auth:check-status'),
+  logout: bridge.buildProvider<void, void>('auth:logout'),
+  statusChanged: bridge.buildEmitter<JDCloudAuthStatus>('auth.status-changed'),
 };
+
+export const jdcloudAuth = auth;
 
 // ---------------------------------------------------------------------------
 // Conversation — REST + WS
@@ -2313,11 +2334,7 @@ export const channel = {
       if (p.platform === 'wecom') {
         return wecomBridgeProviders.setAssistant.invoke(p.assistant);
       }
-      return httpRequest<void>(
-        'PUT',
-        `/api/channel/settings/${encodeURIComponent(p.platform)}/assistant`,
-        p.assistant
-      );
+      return httpRequest<void>('PUT', `/api/channel/settings/${encodeURIComponent(p.platform)}/assistant`, p.assistant);
     },
   },
   setDefaultModelSetting: {

@@ -1,3 +1,4 @@
+import { ipcBridge } from '@/common';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { PREVIEW_SCOPE_KEY_PREFIX } from '@/renderer/pages/conversation/Preview/context/previewScope';
 import { refreshSession } from '@/common/adapter/sessionRefresh';
@@ -136,8 +137,21 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
   const refresh = useCallback(async () => {
     if (isDesktopRuntime) {
-      setStatus('authenticated');
-      setUser(null);
+      setStatus('checking');
+      try {
+        const res = await ipcBridge.auth.checkStatus.invoke();
+        if (res?.authenticated && res.user) {
+          setUser({ id: res.user.pin, username: res.user.pin });
+          setStatus('authenticated');
+        } else {
+          setUser(null);
+          setStatus('unauthenticated');
+        }
+      } catch (err) {
+        console.warn('[Desktop Auth] Check status error:', err);
+        setUser(null);
+        setStatus('unauthenticated');
+      }
       setReady(true);
       return;
     }
@@ -160,6 +174,23 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
   useEffect(() => {
     void refresh();
+
+    if (isDesktopRuntime) {
+      const unsubscribe = ipcBridge.auth.statusChanged.on((authStatus) => {
+        if (authStatus.authenticated && authStatus.user) {
+          setUser({ id: authStatus.user.pin, username: authStatus.user.pin });
+          setStatus('authenticated');
+        } else {
+          setUser(null);
+          setStatus('unauthenticated');
+        }
+      });
+      return () => {
+        unsubscribe();
+        abortRef.current?.abort();
+      };
+    }
+
     return () => {
       abortRef.current?.abort();
     };
@@ -168,8 +199,11 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   const login = useCallback(async ({ username, password, remember }: LoginParams): Promise<LoginResult> => {
     try {
       if (isDesktopRuntime) {
-        setReady(true);
-        return { success: true };
+        const res = await ipcBridge.auth.openLogin.invoke();
+        if (res?.success) {
+          return { success: true };
+        }
+        return { success: false, message: 'Failed to launch JDCloud sign-in' };
       }
 
       // Check CSRF token availability before login
@@ -270,9 +304,15 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
   const logout = useCallback(async () => {
     if (isDesktopRuntime) {
-      setUser(null);
-      setStatus('authenticated');
-      setReady(true);
+      try {
+        await ipcBridge.auth.logout.invoke();
+      } catch (err) {
+        console.error('Desktop logout failed:', err);
+      } finally {
+        setUser(null);
+        setStatus('unauthenticated');
+        clearAuthCache();
+      }
       return;
     }
 

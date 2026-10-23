@@ -22,5 +22,9 @@
     "networkError": "Falha na conexão, por favor tente novamente",
     "serverError": "Erro no servidor, por favor tente novamente mais tarde",
     "unknown": "O login falhou, por favor tente novamente"
-  }
+  },
+  "jdcloudLogin": "Entrar com JDCloud",
+  "jdcloudLoggingIn": "Abrindo navegador...",
+  "jdcloudLoginHint": "Navegador aberto, conclua a autorização",
+  "orDivider": "ou"
 }

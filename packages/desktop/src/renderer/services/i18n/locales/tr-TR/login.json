@@ -22,5 +22,9 @@
     "networkError": "Bağlantı başarısız, lütfen tekrar deneyin",
     "serverError": "Sunucu hatası, lütfen daha sonra tekrar deneyin",
     "unknown": "Giriş başarısız, lütfen tekrar deneyin"
-  }
+  },
+  "jdcloudLogin": "JDCloud ile Giriş Yap",
+  "jdcloudLoggingIn": "Tarayıcı açılıyor...",
+  "jdcloudLoginHint": "Tarayıcı açıldı, lütfen yetkilendirmeyi tamamlayın",
+  "orDivider": "veya"
 }

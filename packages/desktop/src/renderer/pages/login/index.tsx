@@ -130,6 +130,24 @@ const LoginPage: React.FC = () => {
     });
   }, []);
 
+  const isDesktop = typeof window !== 'undefined' && Boolean(window.electronAPI);
+
+  const handleJDCloudLogin = useCallback(async () => {
+    setLoading(true);
+    try {
+      const result = await login({ username: '', password: '' });
+      if (result.success) {
+        showMessage({ type: 'success', text: t('login.jdcloudLoginHint') });
+      } else {
+        showMessage({ type: 'error', text: result.message ?? t('login.errors.unknown') });
+      }
+    } catch {
+      showMessage({ type: 'error', text: t('login.errors.networkError') });
+    } finally {
+      setLoading(false);
+    }
+  }, [login, showMessage, t]);
+
   const handleSubmit = useCallback(
     async (event: React.FormEvent) => {
       event.preventDefault();
@@ -222,6 +240,22 @@ const LoginPage: React.FC = () => {
           <h1 className='login-page__title'>{t('login.brand')}</h1>
           <p className='login-page__subtitle'>{t('login.subtitle')}</p>
         </div>
+
+        {isDesktop && (
+          <div className='login-page__jdcloud-section'>
+            <button
+              type='button'
+              className='login-page__submit login-page__submit--jdcloud'
+              disabled={loading}
+              onClick={handleJDCloudLogin}
+            >
+              <span>{loading ? t('login.jdcloudLoggingIn') : t('login.jdcloudLogin')}</span>
+            </button>
+            <div className='login-page__divider'>
+              <span>{t('login.orDivider')}</span>
+            </div>
+          </div>
+        )}
 
         <form className='login-page__form' onSubmit={handleSubmit}>
           <div className='login-page__form-item'>

@@ -22,5 +22,9 @@
     "networkError": "連線失敗，請稍後再試",
     "serverError": "伺服器發生錯誤，請稍後再試",
     "unknown": "登入失敗，請稍後再試"
-  }
+  },
+  "jdcloudLogin": "京東雲統一賬號登入",
+  "jdcloudLoggingIn": "正在跳轉系統瀏覽器...",
+  "jdcloudLoginHint": "已打開系統瀏覽器，請完成授權",
+  "orDivider": "或者"
 }

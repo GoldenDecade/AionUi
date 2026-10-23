@@ -22,5 +22,9 @@
     "networkError": "Error de conexión, intenta de nuevo",
     "serverError": "Error del servidor, intenta más tarde",
     "unknown": "Error al iniciar sesión, intenta de nuevo"
-  }
+  },
+  "jdcloudLogin": "Iniciar sesión con JDCloud",
+  "jdcloudLoggingIn": "Abriendo navegador...",
+  "jdcloudLoginHint": "Navegador abierto, complete la autorización",
+  "orDivider": "o"
 }

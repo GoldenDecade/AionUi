@@ -6,6 +6,7 @@
 
 import type { BrowserWindow } from 'electron';
 import { ipcBridge } from '@/common';
+import { handleAuthCallback } from '../services/auth';
 
 export const PROTOCOL_SCHEME = 'aionui';
 
@@ -14,6 +15,7 @@ export const PROTOCOL_SCHEME = 'aionui';
  * Supports two formats:
  *   1. aionui://add-provider?base_url=xxx&api_key=xxx
  *   2. aionui://provider/add?v=1&data=<base64 JSON>  (one-api / new-api style)
+ *   3. aionui://auth/callback?code=xxx&state=xxx     (JDCloud SSO callback)
  */
 export const parseDeepLinkUrl = (url: string): { action: string; params: Record<string, string> } | null => {
   try {
@@ -68,6 +70,14 @@ export const clearPendingDeepLinkUrl = (): void => {
 export const handleDeepLinkUrl = (url: string): void => {
   const parsed = parseDeepLinkUrl(url);
   if (!parsed) return;
+
+  // Intercept JDCloud auth callback directly in main process
+  if (parsed.action === 'auth/callback') {
+    const { code, state } = parsed.params;
+    if (code && state) {
+      void handleAuthCallback({ code, state });
+    }
+  }
 
   if (!mainWindowRef || mainWindowRef.isDestroyed()) {
     pendingDeepLinkUrl = url;

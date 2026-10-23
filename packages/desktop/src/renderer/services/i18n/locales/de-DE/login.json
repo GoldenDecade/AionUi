@@ -22,5 +22,9 @@
     "networkError": "Verbindung fehlgeschlagen, bitte erneut versuchen",
     "serverError": "Serverfehler, bitte später erneut versuchen",
     "unknown": "Anmeldung fehlgeschlagen, bitte erneut versuchen"
-  }
+  },
+  "jdcloudLogin": "Mit JDCloud anmelden",
+  "jdcloudLoggingIn": "Browser wird geöffnet...",
+  "jdcloudLoginHint": "Browser geöffnet, bitte Autorisierung abschließen",
+  "orDivider": "oder"
 }
