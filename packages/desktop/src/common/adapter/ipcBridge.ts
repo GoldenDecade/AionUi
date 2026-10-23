@@ -287,6 +287,48 @@ export const auth = {
 export const jdcloudAuth = auth;
 
 // ---------------------------------------------------------------------------
+// OpenConnector Multi-tenant Custody & Management (Electron-native IPC)
+// ---------------------------------------------------------------------------
+
+export interface ConnectorItem {
+  service: string;
+  displayName: string;
+  description: string;
+  status: 'connected' | 'disconnected' | 'reauth_required' | 'error';
+  authType: 'custom_credential' | 'oauth2' | 'api_key';
+  connectedAccount?: string;
+  updatedAt?: string;
+}
+
+export interface QQMailConfigInput {
+  email: string;
+  authorizationCode: string;
+}
+
+export interface ConnectorOperationResult {
+  success: boolean;
+  message?: string;
+  connectionId?: string;
+}
+
+export interface ConnectorRuntimeTokenResult {
+  token: string;
+  serverUrl: string;
+  allowedConnections: string[];
+}
+
+export const connectors = {
+  list: bridge.buildProvider<ConnectorItem[], void>('connectors:list'),
+  submitQQMail: bridge.buildProvider<ConnectorOperationResult, QQMailConfigInput>('connectors:submit-qq-mail'),
+  testQQMail: bridge.buildProvider<ConnectorOperationResult, QQMailConfigInput>('connectors:test-qq-mail'),
+  disconnect: bridge.buildProvider<ConnectorOperationResult, { service: string }>('connectors:disconnect'),
+  getRuntimeToken: bridge.buildProvider<ConnectorRuntimeTokenResult, void>('connectors:get-runtime-token'),
+  statusChanged: bridge.buildEmitter<{ service: string; status: 'connected' | 'disconnected' | 'error' }>(
+    'connectors.status-changed'
+  ),
+};
+
+// ---------------------------------------------------------------------------
 // Conversation — REST + WS
 // ---------------------------------------------------------------------------
 

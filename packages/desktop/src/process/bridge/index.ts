@@ -13,7 +13,7 @@ import { initNotificationBridge } from './notificationBridge';
 import { initWebuiBridge } from './webuiBridge';
 import { initThemeBridge } from './themeBridge';
 import { initWecomBridge } from './wecomBridge';
-import { initAuthBridge } from '../services/auth';
+import { initAuthBridge, initConnectorBridge } from '../services/auth';
 
 export type BridgeDependencies = Record<string, never>;
 
@@ -28,6 +28,7 @@ export function initAllBridges(_deps: BridgeDependencies = {}): void {
   initThemeBridge();
   initWecomBridge();
   initAuthBridge();
+  initConnectorBridge();
 }
 
 export {
@@ -41,6 +42,7 @@ export {
   initWebuiBridge,
   initWecomBridge,
   initAuthBridge,
+  initConnectorBridge,
 };
 export { registerWindowMaximizeListeners } from './windowControlsBridge';
 export const disposeAllTeamSessions = (): Promise<void> => Promise.resolve();

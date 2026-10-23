@@ -6,3 +6,4 @@
 
 export * from './credentialStorage';
 export * from './authBridgeService';
+export * from './joydeskConnectorService';
