@@ -261,13 +261,10 @@ describe('WeCom Channel Service & safeChunkText', () => {
 
       // Subsequent chunk sent via reply
       expect(mockClient.reply).toHaveBeenCalledTimes(1);
-      expect(mockClient.reply).toHaveBeenCalledWith(
-        streamContext.frame,
-        {
-          msgtype: 'text',
-          text: { content: expect.any(String) },
-        }
-      );
+      expect(mockClient.reply).toHaveBeenCalledWith(streamContext.frame, {
+        msgtype: 'text',
+        text: { content: expect.any(String) },
+      });
     });
   });
 });

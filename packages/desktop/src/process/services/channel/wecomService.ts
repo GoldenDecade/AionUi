@@ -362,7 +362,10 @@ export class WecomService {
   }
 
   public async ensureBackendWs(): Promise<void> {
-    if (this.backendWs && (this.backendWs.readyState === WebSocket.OPEN || this.backendWs.readyState === WebSocket.CONNECTING)) {
+    if (
+      this.backendWs &&
+      (this.backendWs.readyState === WebSocket.OPEN || this.backendWs.readyState === WebSocket.CONNECTING)
+    ) {
       return;
     }
 
@@ -575,7 +578,7 @@ export class WecomService {
     // Turn attribution verification: if stream is assigned to a turn_id, discard orphaned chunks from other turns
     const chunkTurnId =
       chunk.turn_id ||
-      ((chunk.data && typeof chunk.data === 'object' && 'turn_id' in chunk.data)
+      (chunk.data && typeof chunk.data === 'object' && 'turn_id' in chunk.data
         ? (chunk.data as { turn_id?: string }).turn_id
         : undefined);
 
@@ -693,9 +696,7 @@ export class WecomService {
     // Check authorization
     const isAuthorized = this.authorizedUsers.some((u) => u.platformUserId === userId);
     if (!isAuthorized) {
-      let pairing = this.pendingPairings.find(
-        (p) => p.platformUserId === userId && p.expiresAt > Date.now()
-      );
+      let pairing = this.pendingPairings.find((p) => p.platformUserId === userId && p.expiresAt > Date.now());
 
       if (!pairing) {
         const code = crypto.randomBytes(3).toString('hex').toUpperCase();
@@ -811,9 +812,7 @@ export class WecomService {
       if (streamContext && streamContext.streamId === streamId && !streamContext.streamFinished) {
         streamContext.streamFinished = true;
         const currentChunks = safeChunkText(streamContext.accumulatedText || '...', 1800);
-        void this.client
-          ?.replyStream(streamContext.frame, streamId, currentChunks[0], true)
-          .catch(() => {});
+        void this.client?.replyStream(streamContext.frame, streamId, currentChunks[0], true).catch(() => {});
       }
     }, MAX_STREAM_WALL_TIME_MS);
     wallTimeoutTimer.unref?.();
@@ -870,7 +869,11 @@ export class WecomService {
         throw new Error(`HTTP error ${sendRes.status}: ${sendRes.statusText}`);
       }
 
-      const sendJson = (await sendRes.json()) as { turn_id?: string; msg_id?: string; data?: { turn_id?: string; msg_id?: string } };
+      const sendJson = (await sendRes.json()) as {
+        turn_id?: string;
+        msg_id?: string;
+        data?: { turn_id?: string; msg_id?: string };
+      };
       const turnId = sendJson.turn_id || sendJson.data?.turn_id;
       const msgId = sendJson.msg_id || sendJson.data?.msg_id;
       if (turnId) {
@@ -914,7 +917,10 @@ export class WecomService {
       authorizedAt: Date.now(),
     };
 
-    this.authorizedUsers = [newUser, ...this.authorizedUsers.filter((u) => u.platformUserId !== pairing.platformUserId)];
+    this.authorizedUsers = [
+      newUser,
+      ...this.authorizedUsers.filter((u) => u.platformUserId !== pairing.platformUserId),
+    ];
     this.pendingPairings = this.pendingPairings.filter((p) => p.code !== code);
     await this.savePersistedConfig();
     ipcBridge.channel.userAuthorized.emit(newUser);
