@@ -83,6 +83,9 @@ export function resolveBinaryPath(): string {
   const bundled = bundledPath(runtimeKey, binaryName, diagnostics);
   if (bundled) return bundled;
 
+  const devPath = devResourcesPath(runtimeKey, binaryName);
+  if (devPath) return devPath;
+
   const fromPath = resolveFromSystemPATH(diagnostics);
   if (fromPath) return fromPath;
 
@@ -159,3 +162,20 @@ function resolveFromSystemPATH(diagnostics: BackendBinaryResolveDiagnostics): st
 }
 
 export type { BackendBinaryResolveDiagnostics };
+
+/**
+ * Check project workspace or installed application in development mode.
+ */
+function devResourcesPath(runtimeKey: string, binaryName: string): string | null {
+  // 1. Workspace resources directory relative to cwd (development mode)
+  const cwdCandidate = resolve(process.cwd(), 'resources', 'bundled-aioncore', runtimeKey, binaryName);
+  if (existsSync(cwdCandidate)) return cwdCandidate;
+
+  // 2. Installed official macOS app fallback
+  if (process.platform === 'darwin') {
+    const installedAppCandidate = `/Applications/AionUi.app/Contents/Resources/bundled-aioncore/${runtimeKey}/${binaryName}`;
+    if (existsSync(installedAppCandidate)) return installedAppCandidate;
+  }
+
+  return null;
+}

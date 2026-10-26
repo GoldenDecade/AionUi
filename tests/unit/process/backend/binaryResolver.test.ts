@@ -119,6 +119,17 @@ describe('resolveBinaryPath', () => {
     expect(resolveBinaryPath()).toBe(resolved);
   });
 
+  it('falls back to workspace resources candidate when bundled path is missing', () => {
+    setResourcesPath(undefined);
+    const runtimeKey = `${process.platform}-${process.arch}`;
+    const binaryName = process.platform === 'win32' ? 'aioncore.exe' : 'aioncore';
+    const workspaceCandidate = resolve(process.cwd(), 'resources', 'bundled-aioncore', runtimeKey, binaryName);
+
+    vi.mocked(existsSync).mockImplementation((path) => path === workspaceCandidate);
+
+    expect(resolveBinaryPath()).toBe(workspaceCandidate);
+  });
+
   it('attaches bundled path diagnostics when aioncore cannot be resolved', () => {
     const resourcesPath = '/app/resources';
     const runtimeKey = `${process.platform}-${process.arch}`;

@@ -36,8 +36,8 @@ if (!app.isPackaged && !e2eUserDataDir) {
   app.setName(devAppName);
   // In Electron 28+, setName alone no longer updates userData path on macOS.
   // Explicitly override userData to the dev directory.
-  const appSupportDir = path.dirname(app.getPath('userData'));
-  app.setPath('userData', path.join(appSupportDir, devAppName));
+  const appDataDir = app.getPath('appData');
+  app.setPath('userData', path.join(appDataDir, devAppName));
 }
 
 // app.disableHardwareAcceleration() must run before app is ready.
