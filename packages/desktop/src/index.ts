@@ -33,6 +33,7 @@ import type { BackendStartupFailureInfo } from './common/types/platform/electron
 import { registerWindowMaximizeListeners } from '@process/bridge';
 import { BackendLifecycleManager } from '@aionui/web-host';
 import { resolveBinaryPath } from '@process/backend';
+import { getDevAppName } from '@/common/platform';
 import './process/bridge/feedbackBridge';
 import { wasLaunchedAtLogin } from '@process/bridge/applicationBridge';
 import { onLanguageChanged } from './process/bridge/systemSettingsBridge';
@@ -481,6 +482,7 @@ const createWindow = ({ showOnReady = true }: { showOnReady?: boolean } = {}): v
   mainWindow = new BrowserWindow({
     width: windowWidth,
     height: windowHeight,
+    title: !app.isPackaged ? getDevAppName() : 'AionUi',
     ...(windowX !== undefined && windowY !== undefined ? { x: windowX, y: windowY } : {}),
     minWidth: MIN_WINDOW_WIDTH,
     minHeight: MIN_WINDOW_HEIGHT,

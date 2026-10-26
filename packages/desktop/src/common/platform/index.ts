@@ -11,12 +11,19 @@ let _services: IPlatformServices | null = null;
 export function getDevAppName(): string {
   const instance = process.env.AIONUI_INSTANCE_NAME || process.env.AIONUI_MULTI_INSTANCE;
   if (instance && instance !== '0' && instance !== 'false') {
-    return instance === '1' ? 'AionUi-Dev-2' : `AionUi-Dev-${instance}`;
+    if (instance === '1') return 'AionUi-Dev-2';
+    if (instance === 'connector' || instance === 'connector-dev' || instance === 'wt-connector') {
+      return 'AionUi-Connector-Dev';
+    }
+    return `AionUi-Dev-${instance}`;
   }
   try {
     const cwdBase = path.basename(process.cwd());
     if (cwdBase && cwdBase !== 'AionUi' && cwdBase.startsWith('AionUi-')) {
       const suffix = cwdBase.replace(/^AionUi-/, '');
+      if (suffix === 'wt-connector' || suffix === 'connector') {
+        return 'AionUi-Connector-Dev';
+      }
       return `AionUi-Dev-${suffix}`;
     }
   } catch {
