@@ -83,6 +83,15 @@ vi.mock('@/renderer/pages/settings/components/SettingsPageWrapper', () => ({
   default: ({ children }: { children: React.ReactNode }) => <div data-testid='settings-page-wrapper'>{children}</div>,
 }));
 
+vi.mock('@/renderer/hooks/context/AuthContext', () => ({
+  useAuth: () => ({
+    user: { id: 'test-user', username: 'Test User' },
+    isJDCloudAuthenticated: false,
+    jdCloudUser: null,
+    logout: vi.fn(),
+  }),
+}));
+
 import ConnectorsSettings from '@/renderer/pages/settings/ConnectorsSettings';
 
 const mockConnectors: ConnectorItem[] = [
