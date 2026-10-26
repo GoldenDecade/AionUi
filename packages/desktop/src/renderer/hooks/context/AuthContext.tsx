@@ -41,6 +41,7 @@ interface AuthContextValue {
   user: AuthUser | null;
   status: AuthStatus;
   login: (params: LoginParams) => Promise<LoginResult>;
+  skipLogin: () => void;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
   clearAuthCache: () => void;
@@ -336,17 +337,27 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     }
   }, []);
 
+  const skipLogin = useCallback(() => {
+    setUser({
+      id: 'local-dev-user',
+      username: 'Guest User',
+    });
+    setStatus('authenticated');
+    setReady(true);
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       ready,
       user,
       status,
       login,
+      skipLogin,
       logout,
       refresh,
       clearAuthCache,
     }),
-    [login, logout, ready, refresh, status, user]
+    [login, skipLogin, logout, ready, refresh, status, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

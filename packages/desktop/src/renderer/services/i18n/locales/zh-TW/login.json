@@ -26,5 +26,6 @@
   "jdcloudLogin": "京東雲統一賬號登入",
   "jdcloudLoggingIn": "正在跳轉系統瀏覽器...",
   "jdcloudLoginHint": "已打開系統瀏覽器，請完成授權",
-  "orDivider": "或者"
+  "orDivider": "或者",
+  "skipLogin": "暫不登入，進入體驗"
 }

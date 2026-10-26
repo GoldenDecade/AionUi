@@ -26,5 +26,6 @@
   "jdcloudLogin": "Mit JDCloud anmelden",
   "jdcloudLoggingIn": "Browser wird geöffnet...",
   "jdcloudLoginHint": "Browser geöffnet, bitte Autorisierung abschließen",
-  "orDivider": "oder"
+  "orDivider": "oder",
+  "skipLogin": "Überspringen und fortfahren"
 }

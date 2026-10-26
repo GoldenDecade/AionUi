@@ -26,5 +26,6 @@
   "jdcloudLogin": "ورود با JDCloud",
   "jdcloudLoggingIn": "در حال باز کردن مرورگر...",
   "jdcloudLoginHint": "مرورگر باز شد، لطفاً احراز هویت را کامل کنید",
-  "orDivider": "یا"
+  "orDivider": "یا",
+  "skipLogin": "رد کردن و ورود به برنامه"
 }

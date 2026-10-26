@@ -26,5 +26,6 @@
   "jdcloudLogin": "Entrar com JDCloud",
   "jdcloudLoggingIn": "Abrindo navegador...",
   "jdcloudLoginHint": "Navegador aberto, conclua a autorização",
-  "orDivider": "ou"
+  "orDivider": "ou",
+  "skipLogin": "Pular e entrar no app"
 }

@@ -26,5 +26,6 @@
   "jdcloudLogin": "京东云统一账号登录",
   "jdcloudLoggingIn": "正在跳转系统浏览器...",
   "jdcloudLoginHint": "已打开系统浏览器，请完成授权",
-  "orDivider": "或者"
+  "orDivider": "或者",
+  "skipLogin": "暂不登录，进入体验"
 }

@@ -26,5 +26,6 @@
   "jdcloudLogin": "JDCloud 계정으로 로그인",
   "jdcloudLoggingIn": "시스템 브라우저를 여는 중...",
   "jdcloudLoginHint": "브라우저가 열렸습니다. 인증을 완료해 주세요",
-  "orDivider": "또는"
+  "orDivider": "또는",
+  "skipLogin": "로그인 건너뛰고 체험"
 }

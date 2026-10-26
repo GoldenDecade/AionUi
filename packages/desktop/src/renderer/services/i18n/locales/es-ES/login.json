@@ -26,5 +26,6 @@
   "jdcloudLogin": "Iniciar sesión con JDCloud",
   "jdcloudLoggingIn": "Abriendo navegador...",
   "jdcloudLoginHint": "Navegador abierto, complete la autorización",
-  "orDivider": "o"
+  "orDivider": "o",
+  "skipLogin": "Omitir y continuar"
 }

@@ -26,5 +26,6 @@
   "jdcloudLogin": "Увійти через JDCloud",
   "jdcloudLoggingIn": "Відкриття браузера...",
   "jdcloudLoginHint": "Браузер відкрито, будь ласка, завершіть авторизацію",
-  "orDivider": "або"
+  "orDivider": "або",
+  "skipLogin": "Пропустити та увійти"
 }

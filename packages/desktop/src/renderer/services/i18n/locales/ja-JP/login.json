@@ -26,5 +26,6 @@
   "jdcloudLogin": "JDCloud アカウントでログイン",
   "jdcloudLoggingIn": "ブラウザを開いています...",
   "jdcloudLoginHint": "ブラウザが開きました。認証を完了してください",
-  "orDivider": "または"
+  "orDivider": "または",
+  "skipLogin": "ログインをスキップして体験"
 }

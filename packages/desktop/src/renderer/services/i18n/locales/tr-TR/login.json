@@ -26,5 +26,6 @@
   "jdcloudLogin": "JDCloud ile Giriş Yap",
   "jdcloudLoggingIn": "Tarayıcı açılıyor...",
   "jdcloudLoginHint": "Tarayıcı açıldı, lütfen yetkilendirmeyi tamamlayın",
-  "orDivider": "veya"
+  "orDivider": "veya",
+  "skipLogin": "Atla ve devam et"
 }

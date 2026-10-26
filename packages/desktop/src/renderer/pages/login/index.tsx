@@ -34,7 +34,7 @@ const deobfuscate = (text: string): string => {
 const LoginPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { status, login } = useAuth();
+  const { status, login, skipLogin } = useAuth();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -376,6 +376,17 @@ const LoginPage: React.FC = () => {
           >
             {message?.text}
           </div>
+
+          <button
+            type='button'
+            className='login-page__skip-btn'
+            onClick={() => {
+              skipLogin();
+              navigate('/', { replace: true });
+            }}
+          >
+            <span>{t('login.skipLogin')}</span>
+          </button>
         </form>
 
         <div className='login-page__footer'>
