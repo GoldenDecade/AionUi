@@ -1465,6 +1465,15 @@
     "account": "Bound Account",
     "lastUpdated": "Updated At",
     "searchPlaceholder": "Search connectors...",
-    "noConnectors": "No connectors found"
+    "noConnectors": "No connectors found",
+    "jdcloudTitle": "JDCloud 企業テナントアカウント",
+    "jdcloudDesc": "JDCloud アカウントを連携すると管理コネクタとクラウドリソースを利用できます。未連携でもローカル機能は動作します。",
+    "jdcloudBound": "連携済み",
+    "jdcloudUnbound": "未連携 (任意)",
+    "jdcloudBindBtn": "JDCloud アカウント連携",
+    "jdcloudUnbindBtn": "連携解除",
+    "jdcloudUnbindSuccess": "連携を解除しました",
+    "jdcloudUnbindFailed": "連携解除に失敗しました",
+    "jdcloudBoundDesc": "企業テナントサービスに接続済みです。"
   }
 }

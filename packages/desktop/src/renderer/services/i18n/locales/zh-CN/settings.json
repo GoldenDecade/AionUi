@@ -1464,6 +1464,15 @@
     "account": "绑定账号",
     "lastUpdated": "更新时间",
     "searchPlaceholder": "搜索连接器...",
-    "noConnectors": "暂无匹配的连接器"
+    "noConnectors": "暂无匹配的连接器",
+    "jdcloudTitle": "京东云企业租户账号",
+    "jdcloudDesc": "绑定京东云账号后可使用托管连接器与云端资源，未绑定不影响本地核心功能",
+    "jdcloudBound": "已绑定",
+    "jdcloudUnbound": "未绑定 (可选)",
+    "jdcloudBindBtn": "绑定京东云账号",
+    "jdcloudUnbindBtn": "解除绑定",
+    "jdcloudUnbindSuccess": "已解除京东云账号绑定",
+    "jdcloudUnbindFailed": "解除绑定失败",
+    "jdcloudBoundDesc": "已连接企业租户服务，就绪使用托管连接器与企业资源"
   }
 }

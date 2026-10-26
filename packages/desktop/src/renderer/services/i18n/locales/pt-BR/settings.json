@@ -1466,6 +1466,15 @@
     "account": "Bound Account",
     "lastUpdated": "Updated At",
     "searchPlaceholder": "Search connectors...",
-    "noConnectors": "No connectors found"
+    "noConnectors": "No connectors found",
+    "jdcloudTitle": "Conta corporativa JDCloud",
+    "jdcloudDesc": "Vincular a conta habilita conectores gerenciados e recursos na nuvem. Funções locais operam normalmente sem vinculação.",
+    "jdcloudBound": "Vinculado",
+    "jdcloudUnbound": "Não vinculado (Opcional)",
+    "jdcloudBindBtn": "Vincular conta JDCloud",
+    "jdcloudUnbindBtn": "Desvincular",
+    "jdcloudUnbindSuccess": "Conta JDCloud desvinculada",
+    "jdcloudUnbindFailed": "Falha ao desvincular",
+    "jdcloudBoundDesc": "Conectado aos serviços corporativos."
   }
 }

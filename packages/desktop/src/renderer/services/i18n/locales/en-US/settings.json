@@ -1463,6 +1463,15 @@
     "account": "Bound Account",
     "lastUpdated": "Updated At",
     "searchPlaceholder": "Search connectors...",
-    "noConnectors": "No connectors found"
+    "noConnectors": "No connectors found",
+    "jdcloudTitle": "JDCloud Enterprise Account",
+    "jdcloudDesc": "Binding a JDCloud account enables managed connectors and cloud resources. Local features work without binding.",
+    "jdcloudBound": "Bound",
+    "jdcloudUnbound": "Not Bound (Optional)",
+    "jdcloudBindBtn": "Bind JDCloud Account",
+    "jdcloudUnbindBtn": "Unbind",
+    "jdcloudUnbindSuccess": "JDCloud account unbound",
+    "jdcloudUnbindFailed": "Failed to unbind JDCloud account",
+    "jdcloudBoundDesc": "Connected to enterprise tenant services. Ready for managed connectors and resources."
   }
 }

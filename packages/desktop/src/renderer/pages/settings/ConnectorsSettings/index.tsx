@@ -5,7 +5,8 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Message, Spin } from '@arco-design/web-react';
+import { Button, Message, Spin, Tag } from '@arco-design/web-react';
+import { useAuth } from '@renderer/hooks/context/AuthContext';
 import { Refresh } from '@icon-park/react';
 import { useTranslation } from 'react-i18next';
 import { ipcBridge } from '@/common';
@@ -29,6 +30,31 @@ const ConnectorsSettings: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [activeConnector, setActiveConnector] = useState<ConnectorItem | null>(null);
   const [disconnectingService, setDisconnectingService] = useState<string | null>(null);
+  const { isDesktop, isJDCloudAuthenticated, jdCloudUser, user, loginJDCloud, logout } = useAuth();
+  const [loggingInJDCloud, setLoggingInJDCloud] = useState(false);
+
+  const handleLoginJDCloud = async () => {
+    try {
+      setLoggingInJDCloud(true);
+      const res = await loginJDCloud();
+      if (res.success) {
+        Message.info(t('login.jdcloudLoginHint'));
+      } else {
+        Message.error(res.message || 'Login failed');
+      }
+    } finally {
+      setLoggingInJDCloud(false);
+    }
+  };
+
+  const handleLogoutJDCloud = async () => {
+    try {
+      await logout();
+      Message.success(t('settings.connectorsConfig.jdcloudUnbindSuccess'));
+    } catch {
+      Message.error(t('settings.connectorsConfig.jdcloudUnbindFailed'));
+    }
+  };
 
   const fetchConnectors = useCallback(async () => {
     try {
@@ -157,6 +183,49 @@ const ConnectorsSettings: React.FC = () => {
             </div>
           }
         />
+
+        {isDesktop && (
+          <div
+            className='p-16px bg-2 rd-12px border border-border-2 flex items-center justify-between'
+            data-testid='jdcloud-sso-card'
+          >
+            <div className='flex items-center gap-12px'>
+              <div className='size-36px rd-8px bg-[rgba(var(--primary-6),0.1)] flex items-center justify-center text-primary-6 text-15px font-bold shrink-0'>
+                JD
+              </div>
+              <div>
+                <div className='flex items-center gap-8px'>
+                  <span className='text-14px font-medium text-t-primary'>
+                    {isJDCloudAuthenticated
+                      ? `${t('settings.connectorsConfig.jdcloudTitle')}: ${jdCloudUser?.pin || user?.username || ''}`
+                      : t('settings.connectorsConfig.jdcloudTitle')}
+                  </span>
+                  <Tag color={isJDCloudAuthenticated ? 'green' : 'gray'} size='small'>
+                    {isJDCloudAuthenticated
+                      ? t('settings.connectorsConfig.jdcloudBound')
+                      : t('settings.connectorsConfig.jdcloudUnbound')}
+                  </Tag>
+                </div>
+                <div className='text-12px text-t-secondary mt-2px'>
+                  {isJDCloudAuthenticated
+                    ? t('settings.connectorsConfig.jdcloudBoundDesc')
+                    : t('settings.connectorsConfig.jdcloudDesc')}
+                </div>
+              </div>
+            </div>
+            <div className='shrink-0 ms-16px'>
+              {isJDCloudAuthenticated ? (
+                <Button size='small' type='outline' status='danger' onClick={handleLogoutJDCloud}>
+                  {t('settings.connectorsConfig.jdcloudUnbindBtn')}
+                </Button>
+              ) : (
+                <Button size='small' type='primary' loading={loggingInJDCloud} onClick={handleLoginJDCloud}>
+                  {t('settings.connectorsConfig.jdcloudBindBtn')}
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
 
         <Spin loading={loading} className='w-full'>
           {filteredConnectors.length > 0 ? (

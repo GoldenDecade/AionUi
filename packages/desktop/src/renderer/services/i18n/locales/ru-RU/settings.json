@@ -1477,6 +1477,15 @@
     "account": "Bound Account",
     "lastUpdated": "Updated At",
     "searchPlaceholder": "Search connectors...",
-    "noConnectors": "No connectors found"
+    "noConnectors": "No connectors found",
+    "jdcloudTitle": "Корпоративный аккаунт JDCloud",
+    "jdcloudDesc": "Привязка открывает доступ к управляемым коннекторам и облачным ресурсам. Локальные функции работают без привязки.",
+    "jdcloudBound": "Привязано",
+    "jdcloudUnbound": "Не привязано (Опционально)",
+    "jdcloudBindBtn": "Привязать аккаунт JDCloud",
+    "jdcloudUnbindBtn": "Отвязать",
+    "jdcloudUnbindSuccess": "Аккаунт JDCloud отвязан",
+    "jdcloudUnbindFailed": "Не удалось отвязать аккаунт",
+    "jdcloudBoundDesc": "Подключено к корпоративным сервисам."
   }
 }

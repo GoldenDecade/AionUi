@@ -2,6 +2,7 @@ import { ipcBridge } from '@/common';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { PREVIEW_SCOPE_KEY_PREFIX } from '@/renderer/pages/conversation/Preview/context/previewScope';
 import { refreshSession } from '@/common/adapter/sessionRefresh';
+import { isElectronDesktop } from '@/renderer/utils/platform';
 // M6: CSRF removed with legacy webserver — stub functions for compatibility, re-implement in M7
 const withCsrfToken = <T extends Record<string, unknown>>(data: T): T => data;
 const hasValidCsrfToken = (): boolean => true;
@@ -13,12 +14,6 @@ type AuthStatus = 'checking' | 'authenticated' | 'unauthenticated';
 export interface AuthUser {
   id: string;
   username: string;
-}
-
-interface LoginParams {
-  username: string;
-  password: string;
-  remember?: boolean;
 }
 
 type LoginErrorCode =
@@ -36,11 +31,29 @@ interface LoginResult {
   shouldClearCache?: boolean;
 }
 
-interface AuthContextValue {
+export interface JDCloudUserProfile {
+  pin: string;
+  role?: string;
+  enterpriseId?: string;
+  seatId?: string;
+  points?: number;
+}
+
+interface LoginParams {
+  username?: string;
+  password?: string;
+  remember?: boolean;
+}
+
+export interface AuthContextValue {
   ready: boolean;
   user: AuthUser | null;
   status: AuthStatus;
-  login: (params: LoginParams) => Promise<LoginResult>;
+  isDesktop: boolean;
+  isJDCloudAuthenticated: boolean;
+  jdCloudUser: JDCloudUserProfile | null;
+  login: (params?: LoginParams) => Promise<LoginResult>;
+  loginJDCloud: () => Promise<LoginResult>;
   skipLogin: () => void;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -51,7 +64,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 const AUTH_USER_ENDPOINT = '/api/auth/user';
 
-const isDesktopRuntime = typeof window !== 'undefined' && Boolean(window.electronAPI);
+const isDesktopRuntime = (): boolean => isElectronDesktop();
 
 // Clear expired auth cache including cookies and localStorage
 // 清除过期的认证缓存，包括 Cookie 和 localStorage
@@ -132,27 +145,35 @@ async function fetchCurrentUser(signal?: AbortSignal): Promise<AuthUser | null> 
 
 export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [status, setStatus] = useState<AuthStatus>('checking');
-  const [ready, setReady] = useState(false);
+  const [jdCloudUser, setJdCloudUser] = useState<JDCloudUserProfile | null>(null);
+  const [isJDCloudAuthenticated, setIsJDCloudAuthenticated] = useState<boolean>(false);
+  const [status, setStatus] = useState<AuthStatus>(isDesktopRuntime() ? 'authenticated' : 'checking');
+  const [ready, setReady] = useState(isDesktopRuntime());
   const abortRef = useRef<AbortController | null>(null);
 
   const refresh = useCallback(async () => {
-    if (isDesktopRuntime) {
-      setStatus('checking');
+    if (isDesktopRuntime()) {
       try {
         const res = await ipcBridge.auth.checkStatus.invoke();
         if (res?.authenticated && res.user) {
           setUser({ id: res.user.pin, username: res.user.pin });
-          setStatus('authenticated');
+          setJdCloudUser(res.user);
+          setIsJDCloudAuthenticated(true);
         } else {
           setUser(null);
-          setStatus('unauthenticated');
+          setJdCloudUser(null);
+          setIsJDCloudAuthenticated(false);
         }
       } catch (err) {
         console.warn('[Desktop Auth] Check status error:', err);
         setUser(null);
-        setStatus('unauthenticated');
+        setJdCloudUser(null);
+        setIsJDCloudAuthenticated(false);
       }
+      // CRITICAL: Desktop runtime is inherently authenticated for local app usage.
+      // JDCloud SSO is an optional tenant/enterprise cloud identity.
+      // Unauthenticated JDCloud SSO must NEVER block the local desktop user.
+      setStatus('authenticated');
       setReady(true);
       return;
     }
@@ -176,15 +197,18 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   useEffect(() => {
     void refresh();
 
-    if (isDesktopRuntime) {
+    if (isDesktopRuntime()) {
       const unsubscribe = ipcBridge.auth.statusChanged.on((authStatus) => {
         if (authStatus.authenticated && authStatus.user) {
           setUser({ id: authStatus.user.pin, username: authStatus.user.pin });
-          setStatus('authenticated');
+          setJdCloudUser(authStatus.user);
+          setIsJDCloudAuthenticated(true);
         } else {
           setUser(null);
-          setStatus('unauthenticated');
+          setJdCloudUser(null);
+          setIsJDCloudAuthenticated(false);
         }
+        setStatus('authenticated');
       });
       return () => {
         unsubscribe();
@@ -197,16 +221,32 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     };
   }, [refresh]);
 
-  const login = useCallback(async ({ username, password, remember }: LoginParams): Promise<LoginResult> => {
+  const loginJDCloud = useCallback(async (): Promise<LoginResult> => {
+    if (!isDesktopRuntime()) {
+      return { success: false, message: 'JDCloud login is only supported in desktop runtime' };
+    }
     try {
-      if (isDesktopRuntime) {
-        const res = await ipcBridge.auth.openLogin.invoke();
-        if (res?.success) {
-          return { success: true };
-        }
-        return { success: false, message: 'Failed to launch JDCloud sign-in' };
+      const res = await ipcBridge.auth.openLogin.invoke();
+      if (res?.success) {
+        return { success: true };
       }
+      return { success: false, message: 'Failed to launch JDCloud sign-in' };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'JDCloud sign-in failed';
+      return { success: false, message };
+    }
+  }, []);
 
+  const login = useCallback(async (params?: LoginParams): Promise<LoginResult> => {
+    if (isDesktopRuntime()) {
+      return loginJDCloud();
+    }
+
+    const username = params?.username ?? '';
+    const password = params?.password ?? '';
+    const remember = params?.remember ?? false;
+
+    try {
       // Check CSRF token availability before login
       // If token is missing, clear cache and inform user
       const csrfTokenValid = hasValidCsrfToken();
@@ -304,14 +344,16 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   }, []);
 
   const logout = useCallback(async () => {
-    if (isDesktopRuntime) {
+    if (isDesktopRuntime()) {
       try {
         await ipcBridge.auth.logout.invoke();
       } catch (err) {
         console.error('Desktop logout failed:', err);
       } finally {
         setUser(null);
-        setStatus('unauthenticated');
+        setJdCloudUser(null);
+        setIsJDCloudAuthenticated(false);
+        setStatus('authenticated');
         clearAuthCache();
       }
       return;
@@ -338,10 +380,6 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   }, []);
 
   const skipLogin = useCallback(() => {
-    setUser({
-      id: 'local-dev-user',
-      username: 'Guest User',
-    });
     setStatus('authenticated');
     setReady(true);
   }, []);
@@ -351,13 +389,17 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       ready,
       user,
       status,
+      isDesktop: isDesktopRuntime(),
+      isJDCloudAuthenticated,
+      jdCloudUser,
       login,
+      loginJDCloud,
       skipLogin,
       logout,
       refresh,
       clearAuthCache,
     }),
-    [login, skipLogin, logout, ready, refresh, status, user]
+    [ready, user, status, isJDCloudAuthenticated, jdCloudUser, login, loginJDCloud, skipLogin, logout, refresh]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1465,6 +1465,15 @@
     "account": "綁定賬號",
     "lastUpdated": "更新時間",
     "searchPlaceholder": "搜尋連接器...",
-    "noConnectors": "暫無匹配的連接器"
+    "noConnectors": "暫無匹配的連接器",
+    "jdcloudTitle": "京東雲企業租戶賬號",
+    "jdcloudDesc": "綁定京東雲賬號後可使用託管連接器與雲端資源，未綁定不影響本地核心功能",
+    "jdcloudBound": "已綁定",
+    "jdcloudUnbound": "未綁定 (可選)",
+    "jdcloudBindBtn": "綁定京東雲賬號",
+    "jdcloudUnbindBtn": "解除綁定",
+    "jdcloudUnbindSuccess": "已解除京東雲賬號綁定",
+    "jdcloudUnbindFailed": "解除綁定失敗",
+    "jdcloudBoundDesc": "已連接企業租戶服務，就緒使用託管連接器與企業資源"
   }
 }

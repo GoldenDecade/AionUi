@@ -62,7 +62,7 @@ const ProtectedLayout: React.FC<{ layout: React.ReactElement }> = ({ layout }) =
 };
 
 const PanelRoute: React.FC<{ layout: React.ReactElement }> = ({ layout }) => {
-  const { status } = useAuth();
+  const { status, isDesktop, isJDCloudAuthenticated } = useAuth();
 
   return (
     <HashRouter>
@@ -70,7 +70,13 @@ const PanelRoute: React.FC<{ layout: React.ReactElement }> = ({ layout }) => {
       <Routes>
         <Route
           path='/login'
-          element={status === 'authenticated' ? <Navigate to='/guid' replace /> : withRouteFallback(LoginPage)}
+          element={
+            (!isDesktop && status === 'authenticated') || (isDesktop && isJDCloudAuthenticated) ? (
+              <Navigate to='/guid' replace />
+            ) : (
+              withRouteFallback(LoginPage)
+            )
+          }
         />
         <Route element={<ProtectedLayout layout={layout} />}>
           <Route index element={<Navigate to='/guid' replace />} />
@@ -113,7 +119,10 @@ const PanelRoute: React.FC<{ layout: React.ReactElement }> = ({ layout }) => {
           <Route path='/scheduled' element={withRouteFallback(ScheduledTasksPage)} />
           <Route path='/scheduled/:job_id' element={withRouteFallback(TaskDetailPage)} />
         </Route>
-        <Route path='*' element={<Navigate to={status === 'authenticated' ? '/guid' : '/login'} replace />} />
+        <Route
+          path='*'
+          element={<Navigate to={isDesktop || status === 'authenticated' ? '/guid' : '/login'} replace />}
+        />
       </Routes>
     </HashRouter>
   );
