@@ -482,7 +482,7 @@ const createWindow = ({ showOnReady = true }: { showOnReady?: boolean } = {}): v
   mainWindow = new BrowserWindow({
     width: windowWidth,
     height: windowHeight,
-    title: !app.isPackaged ? getDevAppName() : 'AionUi',
+    title: !app.isPackaged ? getDevAppName() : 'joy-ai',
     ...(windowX !== undefined && windowY !== undefined ? { x: windowX, y: windowY } : {}),
     minWidth: MIN_WINDOW_WIDTH,
     minHeight: MIN_WINDOW_HEIGHT,

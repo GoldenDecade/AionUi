@@ -1,11 +1,12 @@
-appId: com.aionui.app
-productName: AionUi
-executableName: AionUi
-copyright: Copyright © 2024 AionUi
+appId: com.joyai.desktop
+productName: JoyAI
+executableName: joy-ai
+copyright: Copyright © 2024-2026 JoyAI
 
 protocols:
-  - name: AionUi Protocol
+  - name: JoyAI Protocol
     schemes:
+      - joyai
       - aionui
 
 asar:

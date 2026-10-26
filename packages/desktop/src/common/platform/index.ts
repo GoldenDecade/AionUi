@@ -11,25 +11,27 @@ let _services: IPlatformServices | null = null;
 export function getDevAppName(): string {
   const instance = process.env.AIONUI_INSTANCE_NAME || process.env.AIONUI_MULTI_INSTANCE;
   if (instance && instance !== '0' && instance !== 'false') {
-    if (instance === '1') return 'AionUi-Dev-2';
-    if (instance === 'connector' || instance === 'connector-dev' || instance === 'wt-connector') {
-      return 'AionUi-Connector-Dev';
+    if (instance === '1') return 'joy-ai-dev-2';
+    if (
+      instance === 'joy-ai' ||
+      instance === 'joy-ai-dev' ||
+      instance === 'connector' ||
+      instance === 'connector-dev' ||
+      instance === 'wt-connector'
+    ) {
+      return 'joy-ai';
     }
-    return `AionUi-Dev-${instance}`;
+    return `joy-ai-${instance}`;
   }
   try {
     const cwdBase = path.basename(process.cwd());
     if (cwdBase && cwdBase !== 'AionUi' && cwdBase.startsWith('AionUi-')) {
-      const suffix = cwdBase.replace(/^AionUi-/, '');
-      if (suffix === 'wt-connector' || suffix === 'connector') {
-        return 'AionUi-Connector-Dev';
-      }
-      return `AionUi-Dev-${suffix}`;
+      return 'joy-ai';
     }
   } catch {
     // fallback
   }
-  return 'AionUi-Dev';
+  return 'joy-ai';
 }
 
 export function registerPlatformServices(services: IPlatformServices): void {
